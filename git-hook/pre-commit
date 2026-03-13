@@ -1,0 +1,98 @@
+#!/bin/sh
+# ============================================================
+# Pre-Commit Risk Checker — Git Hook
+# Install: copy to .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+# ============================================================
+
+API_URL="${RISK_CHECKER_API:-http://localhost:5000}"
+DEVELOPER=$(git config user.name || echo "Unknown")
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" || echo "unknown")
+
+echo ""
+echo "🛡️  Pre-Commit Risk Checker — scanning staged changes..."
+echo "   Developer : $DEVELOPER"
+echo "   Branch    : $BRANCH"
+echo "   Repository: $REPO"
+echo ""
+
+# Get list of ALL staged files (full content scan, not just diff)
+CHANGED_FILES=$(git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null)
+
+if [ -z "$CHANGED_FILES" ]; then
+  echo "ℹ️  No staged changes detected. Skipping scan."
+  exit 0
+fi
+
+# Concatenate the FULL content of every staged file for a complete scan
+FULL_CODE=""
+FILE_NAMES=""
+for FILE in $CHANGED_FILES; do
+  if [ -f "$FILE" ]; then
+    FULL_CODE="$FULL_CODE
+$(cat "$FILE")"
+    FILE_NAMES="$FILE_NAMES, $FILE"
+  fi
+done
+
+# Check if backend is reachable
+HEALTH=$(curl -s --max-time 3 "$API_URL/api/health" 2>/dev/null)
+if [ -z "$HEALTH" ]; then
+  echo "⚠️  Risk Checker backend not reachable at $API_URL"
+  echo "   Start it with: cd risk-checker-backend && npm start"
+  echo "   Allowing commit without scan (backend offline)."
+  exit 0
+fi
+
+# Safely escape using Node.js
+ESCAPED_CODE=$(node -e "const fs=require('fs'); console.log(JSON.stringify(fs.readFileSync(0, 'utf-8')));" <<< "$FULL_CODE")
+LINES_CHANGED=$(echo "$FULL_CODE" | wc -l | tr -d ' ')
+
+# Build JSON payload
+PAYLOAD="{\"code\": $ESCAPED_CODE, \"developer\": \"$DEVELOPER\", \"repository\": \"$REPO\", \"branch\": \"$BRANCH\", \"fileName\": \"staged-files.js\", \"linesChanged\": $LINES_CHANGED}"
+
+# Call scan API
+RESPONSE=$(curl -s --max-time 30 \
+  -X POST "$API_URL/api/scan" \
+  -H "Content-Type: application/json" \
+  -d "$PAYLOAD" 2>/dev/null)
+
+if [ -z "$RESPONSE" ]; then
+  echo "⚠️  Scan timed out. Allowing commit."
+  exit 0
+fi
+
+# Parse response fields
+RISK_SCORE=$(echo "$RESPONSE" | grep -o '"risk_score":[0-9]*' | grep -o '[0-9]*' | head -1)
+RISK_LEVEL=$(echo "$RESPONSE" | grep -o '"risk_level":"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' | head -1)
+TOTAL_ISSUES=$(echo "$RESPONSE" | grep -o '"total_issues":[0-9]*' | grep -o '[0-9]*' | head -1)
+COMMIT_ALLOWED=$(echo "$RESPONSE" | grep -o '"commit_allowed":[a-z]*' | grep -o '[a-z]*$' | head -1)
+
+RISK_SCORE=${RISK_SCORE:-0}
+RISK_LEVEL=${RISK_LEVEL:-Unknown}
+TOTAL_ISSUES=${TOTAL_ISSUES:-0}
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "   Risk Score  : $RISK_SCORE / 100"
+echo "   Risk Level  : $RISK_LEVEL"
+echo "   Total Issues: $TOTAL_ISSUES"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+if [ "$COMMIT_ALLOWED" = "false" ] || [ "$RISK_SCORE" -gt 50 ] 2>/dev/null; then
+  echo "⛔ COMMIT BLOCKED — Risk score ($RISK_SCORE) exceeds threshold (50)"
+  echo ""
+  echo "   → View detailed report at: http://localhost:5173/results"
+  echo "   → Fix issues and try again, or run:"
+  echo "     git commit --no-verify   (force commit, NOT recommended)"
+  echo ""
+  exit 1
+else
+  if [ "$TOTAL_ISSUES" -gt 0 ]; then
+    echo "⚠️  Commit allowed with $TOTAL_ISSUES warning(s) — please review"
+  else
+    echo "✅ Commit approved — no security issues detected!"
+  fi
+  echo ""
+  exit 0
+fi

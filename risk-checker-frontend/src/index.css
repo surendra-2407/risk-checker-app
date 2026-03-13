@@ -1,0 +1,212 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── LIGHT THEME (default) ──────────────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  --bg-primary:    #f8fafc;
+  --bg-secondary:  #ffffff;
+  --bg-card:       #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-nav:        rgba(255,255,255,0.92);
+  --border:        #e2e8f0;
+  --border-glow:   rgba(16,185,129,0.3);
+  --text-primary:  #0f172a;
+  --text-secondary:#334155;
+  --text-muted:    #64748b;
+  --text-on-card:  #1e293b;
+  --text-label:    #475569;
+  --accent:        #10b981;
+  --accent-hover:  #059669;
+  --accent-cyan:   #3b82f6;
+  --critical:      #dc2626;
+  --high:          #ef4444;
+  --medium:        #f97316;
+  --low:           #22c55e;
+  --code-bg:       #f1f5f9;
+  --code-border:   #e2e8f0;
+  --code-text:     #0f172a;
+  --input-bg:      #ffffff;
+  --input-border:  #cbd5e1;
+  --scroll-thumb:  #6ee7b7;
+  --body-gradient: linear-gradient(135deg, #f8fafc 0%, #dcfce7 50%, #d1fae5 100%);
+}
+
+/* ── DARK THEME ─────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg-primary:    #020617;
+  --bg-secondary:  #0f172a;
+  --bg-card:       #0f172a;
+  --bg-card-hover: #1e293b;
+  --bg-nav:        rgba(2,6,23,0.92);
+  --border:        #334155;
+  --border-glow:   rgba(16,185,129,0.3);
+  --text-primary:  #f8fafc;
+  --text-secondary:#cbd5e1;
+  --text-muted:    #94a3b8;
+  --text-on-card:  #f1f5f9;
+  --text-label:    #94a3b8;
+  --accent:        #10b981;
+  --accent-hover:  #059669;
+  --accent-cyan:   #3b82f6;
+  --critical:      #dc2626;
+  --high:          #ef4444;
+  --medium:        #f97316;
+  --low:           #22c55e;
+  --code-bg:       #020617;
+  --code-border:   #334155;
+  --code-text:     #f8fafc;
+  --input-bg:      #020617;
+  --input-border:  #334155;
+  --scroll-thumb:  #047857;
+  --body-gradient: linear-gradient(135deg, #020617 0%, #064e3b 50%, #022c22 100%);
+}
+
+/* ── BASE RESET ─────────────────────────────────────────────────────────── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  background-color: var(--bg-primary);
+  background-image: var(--body-gradient);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  scroll-behavior: smooth;
+  min-height: 100vh;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ── SCROLLBAR ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* ── GLASS CARD ─────────────────────────────────────────────────────────── */
+.glass {
+  background: var(--bg-nav);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+}
+
+/* ── GLOW ───────────────────────────────────────────────────────────────── */
+.glow-blue  { box-shadow: 0 0 20px rgba(59,130,246,0.3); }
+.glow-red   { box-shadow: 0 0 20px rgba(239,68,68,0.3); }
+.glow-green { box-shadow: 0 0 20px rgba(34,197,94,0.3); }
+
+/* ── GRADIENT TEXT ──────────────────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #059669, #10b981, #14b8a6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── SEVERITY BADGES ────────────────────────────────────────────────────── */
+.badge-critical { @apply bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold px-2 py-0.5 rounded-full; }
+.badge-high     { @apply bg-orange-500/20 text-orange-400 border border-orange-500/30 text-xs font-semibold px-2 py-0.5 rounded-full; }
+.badge-medium   { @apply bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-xs font-semibold px-2 py-0.5 rounded-full; }
+.badge-low      { @apply bg-green-500/20 text-green-400 border border-green-500/30 text-xs font-semibold px-2 py-0.5 rounded-full; }
+
+/* ── CODE BLOCK ─────────────────────────────────────────────────────────── */
+.code-block {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--code-text);
+}
+
+/* ── BUTTONS ────────────────────────────────────────────────────────────── */
+.btn-primary {
+  @apply font-semibold px-5 py-2.5 rounded-lg transition-all duration-200 flex items-center gap-2;
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 4px 14px 0 rgba(16,185,129,0.35);
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 6px 20px rgba(16,185,129,0.3);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  @apply bg-transparent font-medium px-5 py-2.5 rounded-lg transition-all duration-200 border flex items-center gap-2;
+  color: var(--accent);
+  border-color: var(--border);
+}
+.btn-ghost:hover {
+  background: var(--bg-card-hover);
+  color: var(--accent-hover);
+}
+
+/* ── STAT CARD ──────────────────────────────────────────────────────────── */
+.stat-card {
+  @apply glass rounded-xl p-5 flex flex-col gap-2 transition-all duration-300;
+}
+.stat-card:hover { transform: translateY(-2px); border-color: var(--border-glow); }
+
+/* ── INPUTS ─────────────────────────────────────────────────────────────── */
+.input-dark {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+  @apply rounded-lg px-4 py-2.5 w-full focus:outline-none transition-colors shadow-sm;
+}
+.input-dark:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(16,185,129,0.2);
+}
+.input-dark::placeholder { color: var(--text-label); }
+
+/* ── CARD TEXT HELPERS ──────────────────────────────────────────────────── */
+.text-on-card    { color: var(--text-on-card); }
+.text-label      { color: var(--text-label); }
+.card-bg         { background: var(--bg-card); }
+.border-theme    { border-color: var(--border); }
+
+/* ── SCAN LINE ANIMATION ────────────────────────────────────────────────── */
+@keyframes scanLine {
+  0%   { top: 0; }
+  100% { top: 100%; }
+}
+.scan-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: scanLine 1.5s ease-in-out infinite;
+  box-shadow: 0 0 8px var(--accent);
+}
+
+/* ── GAUGE ARC ──────────────────────────────────────────────────────────── */
+@keyframes dashOffset {
+  from { stroke-dashoffset: 440; }
+  to   { stroke-dashoffset: var(--target-offset); }
+}
+.gauge-arc { animation: dashOffset 1.5s ease-out forwards; }
+
+/* ── DARK MODE — TAILWIND OVERRIDES ────────────────────────────────────── */
+[data-theme="dark"] .bg-white           { background-color: var(--bg-card) !important; }
+[data-theme="dark"] .bg-slate-50        { background-color: var(--bg-card-hover) !important; }
+[data-theme="dark"] .bg-gray-50         { background-color: var(--bg-card-hover) !important; }
+[data-theme="dark"] .text-slate-900     { color: var(--text-primary) !important; }
+[data-theme="dark"] .text-slate-800     { color: var(--text-primary) !important; }
+[data-theme="dark"] .text-slate-700     { color: var(--text-secondary) !important; }
+[data-theme="dark"] .text-slate-600     { color: var(--text-label) !important; }
+[data-theme="dark"] .text-slate-500     { color: var(--text-label) !important; }
+[data-theme="dark"] .border-slate-200   { border-color: var(--border) !important; }
+[data-theme="dark"] .border-slate-300   { border-color: var(--border) !important; }
+[data-theme="dark"] .bg-emerald-50      { background-color: rgba(6,78,59,0.25) !important; }
+[data-theme="dark"] .border-emerald-100 { border-color: var(--border) !important; }
+[data-theme="dark"] .border-emerald-200 { border-color: rgba(16,185,129,0.2) !important; }
+[data-theme="dark"] .shadow-xl          { box-shadow: 0 20px 60px rgba(0,0,0,0.6) !important; }
