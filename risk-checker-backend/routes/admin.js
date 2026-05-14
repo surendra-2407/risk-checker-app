@@ -65,14 +65,20 @@ router.get('/stats', requireAdmin, async (req, res) => {
     const totalUsers = await User.countDocuments();
     const googleUsers = await User.countDocuments({ provider: 'google' });
     const githubUsers = await User.countDocuments({ provider: 'github' });
-    const emailUsers = await User.countDocuments({ provider: 'email' });
+    const emailUsers = await User.countDocuments({ provider: 'password' }); // Fixed from 'email' to 'password'
     const verifiedUsers = await User.countDocuments({ isVerified: true });
 
     const totalScans = await Commit.countDocuments();
     const totalIssues = await Issue.countDocuments();
-
-    // Sum of resolved/rectified issues (for now treating all issues as found)
-    // Could be expanded later to track "fixed" status
+    
+    // NEW: Blocked scans count
+    const blockedScans = await Commit.countDocuments({ commit_allowed: false });
+    
+    // NEW: Average risk score
+    const avgScoreResult = await Commit.aggregate([
+      { $group: { _id: null, avg: { $avg: "$risk_score" } } }
+    ]);
+    const avgRiskScore = avgScoreResult.length > 0 ? Math.round(avgScoreResult[0].avg) : 0;
 
     res.json({
       users: {
@@ -84,7 +90,9 @@ router.get('/stats', requireAdmin, async (req, res) => {
       },
       scans: {
         total: totalScans,
-        issuesFound: totalIssues
+        issuesFound: totalIssues,
+        blocked: blockedScans,
+        avgRiskScore: avgRiskScore
       }
     });
   } catch (err) {
@@ -95,11 +103,34 @@ router.get('/stats', requireAdmin, async (req, res) => {
 
 /**
  * GET /api/admin/users
- * Lists all registered users
+ * Lists all registered users with their scan activity
  */
 router.get('/users', requireAdmin, async (req, res) => {
   try {
-    const users = await User.find({}, '-password').sort({ createdAt: -1 });
+    // NEW: Use aggregation to get user data + scan counts + avg score
+    const users = await User.aggregate([
+      {
+        $lookup: {
+          from: 'commits',
+          localField: 'email',
+          foreignField: 'developer_email',
+          as: 'userScans'
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          email: 1,
+          provider: 1,
+          avatar: 1,
+          isVerified: 1,
+          createdAt: 1,
+          scanCount: { $size: "$userScans" },
+          avgUserScore: { $avg: "$userScans.risk_score" }
+        }
+      },
+      { $sort: { createdAt: -1 } }
+    ]);
     res.json(users);
   } catch (err) {
     console.error('[Admin Users Error]', err);
@@ -113,14 +144,13 @@ router.get('/users', requireAdmin, async (req, res) => {
  */
 router.get('/scans', requireAdmin, async (req, res) => {
   try {
-    // We aggregate commits and lookup their issues so the admin can see everything
     const scans = await Commit.aggregate([
-      { $sort: { createdAt: -1 } },
-      { $limit: 100 }, // Limit to latest 100 for performance on the dashboard
+      { $sort: { timestamp: -1 } }, // Commit uses timestamp instead of createdAt
+      { $limit: 100 },
       {
         $lookup: {
           from: 'issues',
-          localField: 'commitId',
+          localField: 'commit_id', // Commit uses commit_id
           foreignField: 'commitId',
           as: 'issuesList'
         }
