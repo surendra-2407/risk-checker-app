@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Shield, LayoutDashboard, Search, History, Github, LogOut, LogIn, Sun, Moon } from 'lucide-react'
+import { Shield, LayoutDashboard, Search, History, LogOut, LogIn, Sun, Moon } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 
 const navLinks = [
@@ -127,16 +127,6 @@ export default function Navbar() {
           >
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-          <a
-            href="https://github.com/surendrap227/risk-checker"
-            target="_blank"
-            rel="noreferrer"
-            title="View Project Repository"
-            className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 px-4 py-2 rounded-lg transition-all border border-slate-300 shadow-sm"
-          >
-            <Github size={15} />
-            <span className="hidden sm:inline">GitHub</span>
-          </a>
 
           {isAuthenticated ? (
             <div className="flex items-center gap-2">
@@ -155,12 +145,20 @@ export default function Navbar() {
                 className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-sm transition-all"
               >
                 {userAvatar ? (
-                  <img src={userAvatar} alt={userName} className="w-8 h-8 rounded-full object-cover border border-slate-200" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs font-bold">
-                    {initials}
-                  </div>
-                )}
+                  <img
+                    src={userAvatar}
+                    alt={userName}
+                    referrerPolicy="no-referrer"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex' }}
+                    className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                  />
+                ) : null}
+                <div
+                  className="w-8 h-8 rounded-full bg-emerald-600 items-center justify-center text-white text-xs font-bold"
+                  style={{ display: userAvatar ? 'none' : 'flex' }}
+                >
+                  {initials}
+                </div>
                 <span className="hidden sm:inline text-sm font-semibold text-slate-800 max-w-[120px] truncate">{userName}</span>
               </button>
 
@@ -170,12 +168,20 @@ export default function Navbar() {
                   {/* Profile Row */}
                   <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
                     {userAvatar ? (
-                      <img src={userAvatar} alt={userName} className="w-10 h-10 rounded-full object-cover border border-slate-200" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                        {initials}
-                      </div>
-                    )}
+                      <img
+                        src={userAvatar}
+                        alt={userName}
+                        referrerPolicy="no-referrer"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex' }}
+                        className="w-10 h-10 rounded-full object-cover border border-slate-200 flex-shrink-0"
+                      />
+                    ) : null}
+                    <div
+                      className="w-10 h-10 rounded-full bg-emerald-600 items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                      style={{ display: userAvatar ? 'none' : 'flex' }}
+                    >
+                      {initials}
+                    </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-slate-900 truncate">{userName}</p>
                       <p className="text-xs text-slate-500 truncate">{userEmail}</p>

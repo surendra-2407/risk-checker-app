@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { Shield, KeyRound, User, ChevronRight, Github } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { apiUrl } from '../lib/api'
 
 export default function LoginPage() {
   const [email, setEmail]       = useState('')
@@ -74,14 +75,12 @@ export default function LoginPage() {
 
   const handleGithubLogin = () => {
     toast('Redirecting to GitHub...', { icon: '🐙' })
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-    window.location.href = `${apiUrl}/api/auth/github`
+    window.location.href = apiUrl('/api/auth/github')
   }
 
   const handleGoogleLogin = () => {
     toast('Redirecting to Google...', { icon: '🔍' })
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-    window.location.href = `${apiUrl}/api/auth/google`
+    window.location.href = apiUrl('/api/auth/google')
   }
 
   return (

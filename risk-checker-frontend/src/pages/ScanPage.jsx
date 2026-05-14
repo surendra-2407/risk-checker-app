@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { Upload, Zap, Code2, Github, Link2, FileCode } from 'lucide-react'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+import { apiUrl } from '../lib/api'
 
 const DEMO_SNIPPETS = {
   'Leaked Passwords & API Keys': `const api_key = "SAFE_DEMO_KEY";
@@ -98,7 +97,7 @@ export default function ScanPage() {
     setLoading(true)
     await runPhases()
     try {
-      const res = await axios.post(`${API}/api/scan/github-url`, {
+      const res = await axios.post(apiUrl('/api/scan/github-url'), {
         githubUrl: githubUrl.trim(),
         developer: localStorage.getItem('user_name') || 'Anonymous'
       })
@@ -128,7 +127,7 @@ export default function ScanPage() {
       await new Promise(r => setTimeout(r, 500))
     }
     try {
-      const res = await axios.post(`${API}/api/scan`, {
+      const res = await axios.post(apiUrl('/api/scan'), {
         code,
         developer: localStorage.getItem('user_name') || 'Anonymous',
         repository: 'manual-scan',

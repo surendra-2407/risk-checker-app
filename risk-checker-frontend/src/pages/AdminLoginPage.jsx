@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { Shield, KeyRound, Mail, ArrowRight } from 'lucide-react'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+import { apiUrl } from '../lib/api'
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
@@ -18,7 +17,7 @@ export default function AdminLoginPage() {
 
     setLoading(true)
     try {
-      const res = await axios.post(`${API}/api/admin/login`, { email, password })
+      const res = await axios.post(apiUrl('/api/admin/login'), { email, password })
       localStorage.setItem('admin_token', res.data.token)
       localStorage.setItem('admin_user', JSON.stringify(res.data.admin))
       toast.success('Admin access granted')

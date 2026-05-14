@@ -10,8 +10,7 @@ import {
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+import { apiUrl } from '../lib/api'
 
 const LEVEL_COLORS = {
   Low: '#22c55e', Medium: '#eab308', High: '#f97316', Critical: '#ef4444'
@@ -69,8 +68,8 @@ export default function Dashboard() {
     const load = async () => {
       try {
         const [sRes, cRes] = await Promise.all([
-          axios.get(`${API}/api/commits/stats`),
-          axios.get(`${API}/api/commits?limit=6`)
+          axios.get(apiUrl('/api/commits/stats')),
+          axios.get(apiUrl('/api/commits?limit=6'))
         ])
         setStats(sRes.data)
         setCommits(cRes.data.commits || [])

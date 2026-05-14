@@ -6,7 +6,7 @@
 
 API_URL="${RISK_CHECKER_API:-http://localhost:5000}"
 DEVELOPER=$(git config user.name || echo "Unknown")
-BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+BRANCH=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
 REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" || echo "unknown")
 
 echo ""
@@ -24,16 +24,43 @@ if [ -z "$CHANGED_FILES" ]; then
   exit 0
 fi
 
-# Concatenate the FULL content of every staged file for a complete scan
+# Read the staged snapshot from git so we scan exactly what will be committed.
 FULL_CODE=""
-FILE_NAMES=""
-for FILE in $CHANGED_FILES; do
-  if [ -f "$FILE" ]; then
-    FULL_CODE="$FULL_CODE
-$(cat "$FILE")"
-    FILE_NAMES="$FILE_NAMES, $FILE"
+SCANNED_FILES=0
+NON_EMPTY_FILES=0
+while IFS= read -r FILE; do
+  [ -z "$FILE" ] && continue
+
+  if STAGED_CONTENT=$(git show ":$FILE" 2>/dev/null); then
+    SCANNED_FILES=$((SCANNED_FILES + 1))
+
+    if [ -n "$(printf '%s' "$STAGED_CONTENT" | tr -d '[:space:]')" ]; then
+      if [ -z "$FULL_CODE" ]; then
+        FULL_CODE="$STAGED_CONTENT"
+      else
+        FULL_CODE="$FULL_CODE
+$STAGED_CONTENT"
+      fi
+      NON_EMPTY_FILES=$((NON_EMPTY_FILES + 1))
+    fi
   fi
-done
+done <<EOF
+$CHANGED_FILES
+EOF
+
+if [ "$SCANNED_FILES" -eq 0 ]; then
+  echo "❌ Could not read staged file contents from git."
+  echo "   Blocking commit because the scan input could not be prepared."
+  echo "   Retry the commit, or run:"
+  echo "     git commit --no-verify   (force commit, NOT recommended)"
+  exit 1
+fi
+
+if [ "$NON_EMPTY_FILES" -eq 0 ]; then
+  echo "ℹ️  Only empty or whitespace-only staged files detected."
+  echo "   No security scan was needed for this commit."
+  exit 0
+fi
 
 # Check if backend is reachable
 HEALTH=$(curl -s --max-time 3 "$API_URL/api/health" 2>/dev/null)
@@ -44,29 +71,47 @@ if [ -z "$HEALTH" ]; then
   exit 0
 fi
 
-# Safely escape using Node.js
-ESCAPED_CODE=$(node -e "const fs=require('fs'); console.log(JSON.stringify(fs.readFileSync(0, 'utf-8')));" <<< "$FULL_CODE")
-LINES_CHANGED=$(echo "$FULL_CODE" | wc -l | tr -d ' ')
-
-# Build JSON payload
-PAYLOAD="{\"code\": $ESCAPED_CODE, \"developer\": \"$DEVELOPER\", \"repository\": \"$REPO\", \"branch\": \"$BRANCH\", \"fileName\": \"staged-files.js\", \"linesChanged\": $LINES_CHANGED}"
+# Safely build the JSON payload with Node.js so metadata is escaped correctly.
+LINES_CHANGED=$(printf '%s' "$FULL_CODE" | node -e "const fs=require('fs'); const text=fs.readFileSync(0, 'utf8'); process.stdout.write(String(text.length ? text.split(/\\n/).length : 0));")
+PAYLOAD=$(printf '%s' "$FULL_CODE" | node -e "const fs=require('fs'); const payload = { code: fs.readFileSync(0, 'utf8'), developer: process.argv[1] || 'Unknown', repository: process.argv[2] || 'unknown', branch: process.argv[3] || 'main', fileName: 'staged-files.js', linesChanged: Number(process.argv[4] || 0) }; process.stdout.write(JSON.stringify(payload));" "$DEVELOPER" "$REPO" "$BRANCH" "$LINES_CHANGED")
 
 # Call scan API
-RESPONSE=$(curl -s --max-time 30 \
+HTTP_RESPONSE=$(curl -s --max-time 30 -w "\n%{http_code}" \
   -X POST "$API_URL/api/scan" \
   -H "Content-Type: application/json" \
   -d "$PAYLOAD" 2>/dev/null)
+CURL_STATUS=$?
 
-if [ -z "$RESPONSE" ]; then
-  echo "⚠️  Scan timed out. Allowing commit."
-  exit 0
+if [ "$CURL_STATUS" -ne 0 ] || [ -z "$HTTP_RESPONSE" ]; then
+  echo "❌ Scan request failed or timed out."
+  echo "   Blocking commit because no scan result was returned."
+  echo "   Retry after the backend is healthy, or run:"
+  echo "     git commit --no-verify   (force commit, NOT recommended)"
+  exit 1
+fi
+
+HTTP_STATUS=$(printf '%s' "$HTTP_RESPONSE" | tail -n 1)
+RESPONSE=$(printf '%s' "$HTTP_RESPONSE" | sed '$d')
+
+ERROR_MESSAGE=$(printf '%s' "$RESPONSE" | node -e "const fs=require('fs'); const body=fs.readFileSync(0, 'utf8'); try { const data=JSON.parse(body); process.stdout.write(data.error || data.message || 'Unknown scan error'); } catch (_) { process.stdout.write(body.trim() || 'Unknown scan error'); }")
+
+PARSED_FIELDS=$(printf '%s' "$RESPONSE" | node -e "const fs=require('fs'); const body=fs.readFileSync(0, 'utf8'); try { const data=JSON.parse(body); const valid = typeof data.risk_score === 'number' && typeof data.risk_level === 'string' && typeof data.total_issues === 'number' && typeof data.commit_allowed === 'boolean'; if (!valid) process.exit(2); process.stdout.write([data.risk_score, data.risk_level, data.total_issues, data.commit_allowed].join('\\n')); } catch (_) { process.exit(1); }")
+PARSE_STATUS=$?
+
+if [ "$HTTP_STATUS" -ne 200 ] || [ "$PARSE_STATUS" -ne 0 ]; then
+  echo "❌ Scan failed: $ERROR_MESSAGE"
+  echo "   Backend responded with HTTP $HTTP_STATUS."
+  echo "   Blocking commit because no valid security result was returned."
+  echo "   Retry after fixing the backend, or run:"
+  echo "     git commit --no-verify   (force commit, NOT recommended)"
+  exit 1
 fi
 
 # Parse response fields
-RISK_SCORE=$(echo "$RESPONSE" | grep -o '"risk_score":[0-9]*' | grep -o '[0-9]*' | head -1)
-RISK_LEVEL=$(echo "$RESPONSE" | grep -o '"risk_level":"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' | head -1)
-TOTAL_ISSUES=$(echo "$RESPONSE" | grep -o '"total_issues":[0-9]*' | grep -o '[0-9]*' | head -1)
-COMMIT_ALLOWED=$(echo "$RESPONSE" | grep -o '"commit_allowed":[a-z]*' | grep -o '[a-z]*$' | head -1)
+RISK_SCORE=$(printf '%s' "$PARSED_FIELDS" | sed -n '1p')
+RISK_LEVEL=$(printf '%s' "$PARSED_FIELDS" | sed -n '2p')
+TOTAL_ISSUES=$(printf '%s' "$PARSED_FIELDS" | sed -n '3p')
+COMMIT_ALLOWED=$(printf '%s' "$PARSED_FIELDS" | sed -n '4p')
 
 RISK_SCORE=${RISK_SCORE:-0}
 RISK_LEVEL=${RISK_LEVEL:-Unknown}

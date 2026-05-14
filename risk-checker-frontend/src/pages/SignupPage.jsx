@@ -3,8 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { Shield, KeyRound, User, ChevronRight, Github, Mail } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+import { apiUrl } from '../lib/api'
 
 export default function SignupPage() {
   const [name, setName]         = useState('')
@@ -57,7 +56,7 @@ export default function SignupPage() {
 
     setLoading(true)
     try {
-      const res = await axios.post(`${API}/api/auth/signup`, { name, email, password })
+      const res = await axios.post(apiUrl('/api/auth/signup'), { name, email, password })
       setSentTo(email)
       setEmailSent(true)
       toast.success(res.data.message || 'Verification email sent!')
@@ -71,12 +70,12 @@ export default function SignupPage() {
 
   const handleGithubLogin = () => {
     toast('Redirecting to GitHub...', { icon: '🐙' })
-    window.location.href = `${API}/api/auth/github`
+    window.location.href = apiUrl('/api/auth/github')
   }
 
   const handleGoogleLogin = () => {
     toast('Redirecting to Google...', { icon: '🔍' })
-    window.location.href = `${API}/api/auth/google`
+    window.location.href = apiUrl('/api/auth/google')
   }
 
   const handleVerifyOtp = async (e) => {
@@ -87,7 +86,7 @@ export default function SignupPage() {
     }
     setVerifying(true)
     try {
-      const res = await axios.post(`${API}/api/auth/verify-code`, { email: sentTo, code: otp })
+      const res = await axios.post(apiUrl('/api/auth/verify-code'), { email: sentTo, code: otp })
       const user = res.data.user
       
       localStorage.setItem('auth_token', 'verified_' + Date.now())

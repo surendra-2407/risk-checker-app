@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Clock, Filter, ChevronDown, ChevronUp, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+import { apiUrl } from '../lib/api'
 
 
 
@@ -20,7 +19,7 @@ export default function HistoryPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await axios.get(`${API}/api/commits?limit=30`)
+        const res = await axios.get(apiUrl('/api/commits?limit=30'))
         setCommits(res.data.commits || [])
       } catch {
         setCommits([])

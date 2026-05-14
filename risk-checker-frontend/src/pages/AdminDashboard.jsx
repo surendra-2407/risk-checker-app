@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { Shield, Users, Activity, LogOut, Github, Mail, CheckCircle, Database } from 'lucide-react'
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+import { apiUrl } from '../lib/api'
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null)
@@ -21,9 +20,9 @@ export default function AdminDashboard() {
       try {
         const headers = { Authorization: `Bearer ${token}` }
         const [statsRes, usersRes, scansRes] = await Promise.all([
-          axios.get(`${API}/api/admin/stats`, { headers }),
-          axios.get(`${API}/api/admin/users`, { headers }),
-          axios.get(`${API}/api/admin/scans`, { headers })
+          axios.get(apiUrl('/api/admin/stats'), { headers }),
+          axios.get(apiUrl('/api/admin/users'), { headers }),
+          axios.get(apiUrl('/api/admin/scans'), { headers })
         ])
         setStats(statsRes.data)
         setUsers(usersRes.data)
