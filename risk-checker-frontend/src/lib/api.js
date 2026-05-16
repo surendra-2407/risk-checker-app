@@ -13,12 +13,20 @@ function normalizeApiBaseUrl(value) {
 
 function resolveApiBaseUrl() {
   const normalized = normalizeApiBaseUrl(RAW_API_URL)
-  if (normalized) return normalized
+  
+  // If we have a URL and it's NOT localhost, or if we are in DEV mode, use it.
+  if (normalized && (!normalized.includes('localhost') || import.meta.env.DEV)) {
+    return normalized
+  }
 
+  // Fallback for DEV mode if RAW_API_URL was empty or invalid
   if (import.meta.env.DEV) {
     return 'http://localhost:5000'
   }
 
+  // In production, if VITE_API_URL is missing or incorrectly set to localhost,
+  // we try to use the current origin as a last resort, though it likely won't 
+  // work if the backend is on a different Render service.
   if (typeof window !== 'undefined') {
     return window.location.origin
   }
