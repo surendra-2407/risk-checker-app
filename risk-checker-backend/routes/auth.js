@@ -15,7 +15,8 @@ router.get('/github', (req, res) => {
     return res.redirect(`${frontendUrl}/login?error=github_oauth_not_configured`);
   }
 
-  const redirectUri = `${process.env.API_URL || 'http://localhost:5000'}/api/auth/github/callback`;
+  const baseUrl = process.env.API_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:5000';
+  const redirectUri = `${baseUrl}/api/auth/github/callback`;
   const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user`;
   res.redirect(githubAuthUrl);
 });
@@ -78,7 +79,8 @@ router.get('/google', (req, res) => {
     return res.redirect(`${frontendUrl}/login?error=google_oauth_not_configured`);
   }
 
-  const redirectUri = process.env.GOOGLE_CALLBACK_URL || `${process.env.API_URL || 'http://localhost:5000'}/api/auth/google/callback`;
+  const baseUrl = process.env.API_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:5000';
+  const redirectUri = process.env.GOOGLE_CALLBACK_URL || `${baseUrl}/api/auth/google/callback`;
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=email%20profile`;
   
   res.redirect(googleAuthUrl);
@@ -99,7 +101,8 @@ router.get('/google/callback', async (req, res) => {
   }
 
   try {
-    const redirectUri = process.env.GOOGLE_CALLBACK_URL || `${process.env.API_URL || 'http://localhost:5000'}/api/auth/google/callback`;
+    const baseUrl = process.env.API_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:5000';
+    const redirectUri = process.env.GOOGLE_CALLBACK_URL || `${baseUrl}/api/auth/google/callback`;
     const response = await axios.post(
       'https://oauth2.googleapis.com/token',
       {
