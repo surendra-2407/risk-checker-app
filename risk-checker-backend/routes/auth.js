@@ -115,7 +115,7 @@ router.get('/google', (req, res) => {
   
   const redirectUri = `${baseUrl}/api/auth/google/callback`;
   const state = encodeURIComponent(frontendUrl);
-  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=email%20profile&state=${state}`;
+  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=email%20profile&state=${state}&prompt=select_account`;
   
   res.redirect(googleAuthUrl);
 });
