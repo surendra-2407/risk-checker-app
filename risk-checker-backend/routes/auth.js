@@ -26,8 +26,11 @@ router.get('/github', (req, res) => {
   } else if (process.env.API_URL) {
     baseUrl = process.env.API_URL;
   }
+  baseUrl = baseUrl.replace(/\/+$/, '');
   
   const redirectUri = `${baseUrl}/api/auth/github/callback`;
+  console.log('[GitHub OAuth] redirect_uri:', redirectUri);
+  console.log('[GitHub OAuth] RENDER_EXTERNAL_URL:', process.env.RENDER_EXTERNAL_URL);
   const state = encodeURIComponent(frontendUrl);
   const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user&state=${state}`;
   res.redirect(githubAuthUrl);
