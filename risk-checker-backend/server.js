@@ -16,6 +16,9 @@ const adminRoutes = require('./routes/admin');
 
 const app = express();
 
+// Trust proxy for Render/Heroku deployments so express-rate-limit gets correct IP
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
