@@ -10,7 +10,7 @@ router.get('/github', (req, res) => {
   const clientId = process.env.GITHUB_CLIENT_ID;
   
   // Get frontend url dynamically from referer header, fallback to env or localhost
-  let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  let frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
   if (req.headers.referer) {
     try {
       const parsedReferer = new URL(req.headers.referer);
@@ -43,7 +43,7 @@ router.get('/github/callback', async (req, res) => {
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
   
   // Extract frontend URL from the OAuth state parameter
-  let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  let frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
   if (state) {
     frontendUrl = decodeURIComponent(state);
   }
@@ -92,7 +92,7 @@ router.get('/google', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
 
   // Get frontend url dynamically from referer header, fallback to env or localhost
-  let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  let frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
   if (req.headers.referer) {
     try {
       const parsedReferer = new URL(req.headers.referer);
@@ -130,7 +130,7 @@ router.get('/google/callback', async (req, res) => {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
   // Extract frontend URL from the OAuth state parameter
-  let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  let frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
   if (state) {
     frontendUrl = decodeURIComponent(state);
   }
