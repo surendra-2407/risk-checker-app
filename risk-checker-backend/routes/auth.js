@@ -8,7 +8,17 @@ const router = express.Router();
  */
 router.get('/github', (req, res) => {
   const clientId = process.env.GITHUB_CLIENT_ID;
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  
+  // Get frontend url dynamically from referer header, fallback to env or localhost
+  let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  if (req.headers.referer) {
+    try {
+      const parsedReferer = new URL(req.headers.referer);
+      frontendUrl = parsedReferer.origin;
+    } catch (e) {
+      // Fallback used
+    }
+  }
 
   let baseUrl = 'http://localhost:5000';
   if (process.env.RENDER_EXTERNAL_URL) {
@@ -18,7 +28,8 @@ router.get('/github', (req, res) => {
   }
   
   const redirectUri = `${baseUrl}/api/auth/github/callback`;
-  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user`;
+  const state = encodeURIComponent(frontendUrl);
+  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user&state=${state}`;
   res.redirect(githubAuthUrl);
 });
 
@@ -27,10 +38,15 @@ router.get('/github', (req, res) => {
  * Handles the redirect back from GitHub, exchanges code for token.
  */
 router.get('/github/callback', async (req, res) => {
-  const { code } = req.query;
+  const { code, state } = req.query;
   const clientId = process.env.GITHUB_CLIENT_ID;
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  
+  // Extract frontend URL from the OAuth state parameter
+  let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  if (state) {
+    frontendUrl = decodeURIComponent(state);
+  }
 
   if (!code || !clientId || !clientSecret) {
     return res.redirect(`${frontendUrl}/login?error=github_oauth_failed`);
@@ -74,7 +90,17 @@ router.get('/github/callback', async (req, res) => {
  */
 router.get('/google', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+  // Get frontend url dynamically from referer header, fallback to env or localhost
+  let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  if (req.headers.referer) {
+    try {
+      const parsedReferer = new URL(req.headers.referer);
+      frontendUrl = parsedReferer.origin;
+    } catch (e) {
+      // Fallback used
+    }
+  }
 
   if (!clientId) {
     return res.redirect(`${frontendUrl}/login?error=google_oauth_not_configured`);
@@ -88,7 +114,8 @@ router.get('/google', (req, res) => {
   }
   
   const redirectUri = `${baseUrl}/api/auth/google/callback`;
-  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=email%20profile`;
+  const state = encodeURIComponent(frontendUrl);
+  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=email%20profile&state=${state}`;
   
   res.redirect(googleAuthUrl);
 });
@@ -98,10 +125,15 @@ router.get('/google', (req, res) => {
  * Handles the redirect back from Google, exchanges code for token.
  */
 router.get('/google/callback', async (req, res) => {
-  const { code } = req.query;
+  const { code, state } = req.query;
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+  // Extract frontend URL from the OAuth state parameter
+  let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  if (state) {
+    frontendUrl = decodeURIComponent(state);
+  }
 
   if (!code || !clientId || !clientSecret) {
     return res.redirect(`${frontendUrl}/login?error=google_oauth_failed`);
