@@ -130,6 +130,7 @@ export default function ScanPage() {
       const res = await axios.post(apiUrl('/api/scan'), {
         code,
         developer: localStorage.getItem('user_name') || 'Anonymous',
+        email: localStorage.getItem('user_email') || '',
         repository: 'manual-scan',
         branch: 'main',
         fileName,

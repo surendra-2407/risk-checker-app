@@ -20,19 +20,22 @@ router.get('/github', (req, res) => {
     }
   }
 
-  let baseUrl = 'http://localhost:5000';
-  if (process.env.RENDER_EXTERNAL_URL) {
-    baseUrl = process.env.RENDER_EXTERNAL_URL;
-  } else if (process.env.API_URL) {
-    baseUrl = process.env.API_URL;
+  // Use explicit callback URL from env (must match what's registered in GitHub OAuth App)
+  let redirectUri = process.env.GITHUB_CALLBACK_URL;
+  if (!redirectUri) {
+    let baseUrl = 'http://localhost:5000';
+    if (process.env.RENDER_EXTERNAL_URL) {
+      baseUrl = process.env.RENDER_EXTERNAL_URL;
+    } else if (process.env.API_URL) {
+      baseUrl = process.env.API_URL;
+    }
+    baseUrl = baseUrl.replace(/\/+$/, '');
+    redirectUri = `${baseUrl}/api/auth/github/callback`;
   }
-  baseUrl = baseUrl.replace(/\/+$/, '');
-  
-  const redirectUri = `${baseUrl}/api/auth/github/callback`;
+
   console.log('[GitHub OAuth] redirect_uri:', redirectUri);
-  console.log('[GitHub OAuth] RENDER_EXTERNAL_URL:', process.env.RENDER_EXTERNAL_URL);
   const state = encodeURIComponent(frontendUrl);
-  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user&state=${state}`;
+  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user&state=${state}`;
   res.redirect(githubAuthUrl);
 });
 
@@ -109,16 +112,21 @@ router.get('/google', (req, res) => {
     return res.redirect(`${frontendUrl}/login?error=google_oauth_not_configured`);
   }
 
-  let baseUrl = 'http://localhost:5000';
-  if (process.env.RENDER_EXTERNAL_URL) {
-    baseUrl = process.env.RENDER_EXTERNAL_URL;
-  } else if (process.env.API_URL) {
-    baseUrl = process.env.API_URL;
+  // Use explicit callback URL from env (must match what's registered in Google Cloud Console)
+  let redirectUri = process.env.GOOGLE_CALLBACK_URL;
+  if (!redirectUri) {
+    let baseUrl = 'http://localhost:5000';
+    if (process.env.RENDER_EXTERNAL_URL) {
+      baseUrl = process.env.RENDER_EXTERNAL_URL;
+    } else if (process.env.API_URL) {
+      baseUrl = process.env.API_URL;
+    }
+    redirectUri = `${baseUrl}/api/auth/google/callback`;
   }
-  
-  const redirectUri = `${baseUrl}/api/auth/google/callback`;
+
+  console.log('[Google OAuth] redirect_uri:', redirectUri);
   const state = encodeURIComponent(frontendUrl);
-  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=email%20profile&state=${state}&prompt=select_account`;
+  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=email%20profile&state=${state}&prompt=select_account`;
   
   res.redirect(googleAuthUrl);
 });
@@ -143,14 +151,17 @@ router.get('/google/callback', async (req, res) => {
   }
 
   try {
-    let baseUrl = 'http://localhost:5000';
-    if (process.env.RENDER_EXTERNAL_URL) {
-      baseUrl = process.env.RENDER_EXTERNAL_URL;
-    } else if (process.env.API_URL) {
-      baseUrl = process.env.API_URL;
+    // Must use the exact same redirect_uri as the initial /google request
+    let redirectUri = process.env.GOOGLE_CALLBACK_URL;
+    if (!redirectUri) {
+      let baseUrl = 'http://localhost:5000';
+      if (process.env.RENDER_EXTERNAL_URL) {
+        baseUrl = process.env.RENDER_EXTERNAL_URL;
+      } else if (process.env.API_URL) {
+        baseUrl = process.env.API_URL;
+      }
+      redirectUri = `${baseUrl}/api/auth/google/callback`;
     }
-    
-    const redirectUri = `${baseUrl}/api/auth/google/callback`;
     const response = await axios.post(
       'https://oauth2.googleapis.com/token',
       {

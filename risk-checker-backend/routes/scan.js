@@ -7,6 +7,7 @@ const { scanWithGitGuardian } = require('../services/gitguardianService');
 const { getRiskClassification } = require('../services/huggingfaceService');
 const Commit = require('../models/Commit');
 const Issue = require('../models/Issue');
+const { sendScanResultEmail, sendCriticalAlertEmail } = require('../services/emailService');
 
 /**
  * POST /api/scan
@@ -94,6 +95,24 @@ router.post('/', async (req, res) => {
       console.warn('[DB] Save skipped:', dbErr.message);
     }
 
+    const timestamp = new Date().toISOString();
+    const issueList = enrichedIssues.map(issue => ({
+      issue_type:        issue.issue_type,
+      category:          issue.category,
+      severity:          issue.severity,
+      rule_id:           issue.rule_id || '',
+      file_name:         issue.file_name,
+      line_number:       issue.line_number,
+      code_snippet:      issue.code_snippet,
+      description:       issue.description,
+      suggested_fix:     issue.suggested_fix,
+      owasp_ref:         issue.owasp_ref,
+      gg_type:           issue.gg_type || null,
+      gg_validity:       issue.gg_validity || null,
+      ai_explanation:    issue.ai_explanation || '',
+      ai_corrected_code: issue.ai_corrected_code || ''
+    }));
+
     // ── Step 6: Build and return response ───────────────────────────────────
     res.json({
       success: true,
@@ -106,29 +125,30 @@ router.post('/', async (req, res) => {
       total_issues: enrichedIssues.length,
       gitguardian_issues: ggIssues.length,
       severity_counts: counts,
-      ml_classification: mlClassification,   // HuggingFace secondary signal
+      ml_classification: mlClassification,
       developer,
       repository,
       branch,
       fileName,
-      timestamp: new Date().toISOString(),
-      issues: enrichedIssues.map(issue => ({
-        issue_type:       issue.issue_type,
-        category:         issue.category,
-        severity:         issue.severity,
-        rule_id:          issue.rule_id || '',
-        file_name:        issue.file_name,
-        line_number:      issue.line_number,
-        code_snippet:     issue.code_snippet,
-        description:      issue.description,
-        suggested_fix:    issue.suggested_fix,
-        owasp_ref:        issue.owasp_ref,
-        gg_type:          issue.gg_type || null,
-        gg_validity:      issue.gg_validity || null,
-        ai_explanation:   issue.ai_explanation || '',
-        ai_corrected_code: issue.ai_corrected_code || ''
-      }))
+      timestamp,
+      issues: issueList
     });
+
+    // ── Step 7: Fire-and-forget emails (after response sent) ─────────────────
+    if (email) {
+      const scanData = {
+        risk_score: score, risk_level: level, commit_allowed,
+        repository, branch, fileName, severity_counts: counts,
+        issues: issueList, timestamp
+      };
+      // Always send the full scan result report
+      sendScanResultEmail(email, developer, scanData).catch(() => {});
+      // Extra critical alert if risk is Critical or any Critical-severity issue exists
+      if (level === 'Critical' || (counts.Critical && counts.Critical > 0)) {
+        sendCriticalAlertEmail(email, developer, scanData).catch(() => {});
+      }
+    }
+
   } catch (err) {
     console.error('[Scan] Error:', err);
     res.status(500).json({ error: 'Scan failed', message: err.message });

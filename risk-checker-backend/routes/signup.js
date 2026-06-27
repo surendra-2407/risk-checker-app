@@ -3,7 +3,7 @@ const router  = express.Router();
 const bcrypt  = require('bcryptjs');
 const crypto  = require('crypto');
 const User    = require('../models/User');
-const { sendVerificationEmail } = require('../services/emailService');
+const { sendVerificationEmail, sendWelcomeEmail } = require('../services/emailService');
 
 /**
  * POST /api/auth/signup
@@ -88,6 +88,9 @@ router.post('/verify-code', async (req, res) => {
     user.verificationToken = null;
     user.verificationExpires = null;
     await user.save();
+
+    // Send welcome email (fire-and-forget — never blocks the response)
+    sendWelcomeEmail(user.email, user.name).catch(() => {});
 
     res.json({
       success: true,

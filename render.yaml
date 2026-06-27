@@ -20,13 +20,62 @@ services:
     buildCommand: npm install
     startCommand: npm start
     envVars:
+      # ── Core ────────────────────────────────────────────────────────────────
+      - key: NODE_ENV
+        value: production
       - key: FRONTEND_URL
-        sync: false
+        sync: false                       # e.g. https://your-app.vercel.app
+
+      # ── Database ─────────────────────────────────────────────────────────────
       - key: MONGODB_URI
         sync: false
+
+      # ── Security ─────────────────────────────────────────────────────────────
+      - key: JWT_SECRET
+        generateValue: true               # Render auto-generates a strong secret
+
+      # ── AI / LLM ─────────────────────────────────────────────────────────────
       - key: GEMINI_API_KEY
         sync: false
+
+      # ── Secret Detection ──────────────────────────────────────────────────────
       - key: GITGUARDIAN_API_KEY
         sync: false
+
+      # ── ML Classification ─────────────────────────────────────────────────────
       - key: HUGGINGFACE_API_KEY
+        sync: false
+
+      # ── GitHub OAuth ─────────────────────────────────────────────────────────
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_CALLBACK_URL
+        sync: false                       # https://risk-checker-app-1.onrender.com/api/auth/github/callback
+      - key: GITHUB_WEBHOOK_SECRET
+        sync: false
+
+      # ── Google OAuth ──────────────────────────────────────────────────────────
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        sync: false                       # https://risk-checker-app-1.onrender.com/api/auth/google/callback
+
+      # ── Email (Brevo) ─────────────────────────────────────────────────────────
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_FROM_EMAIL
+        sync: false
+      - key: BREVO_FROM_NAME
+        value: Risk Checker
+
+      # ── Admin Seed ────────────────────────────────────────────────────────────
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
         sync: false

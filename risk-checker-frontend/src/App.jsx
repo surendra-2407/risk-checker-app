@@ -4,6 +4,8 @@ import Navbar from './components/Navbar'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import Dashboard from './pages/Dashboard'
 import ScanPage from './pages/ScanPage'
 import ResultsPage from './pages/ResultsPage'
@@ -18,9 +20,11 @@ export default function App() {
       <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
         <Navbar />
         <Routes>
-          <Route path="/"         element={<LandingPage />} />
-          <Route path="/login"    element={<LoginPage />} />
-          <Route path="/signup"   element={<SignupPage />} />
+          <Route path="/"                element={<LandingPage />} />
+          <Route path="/login"           element={<LoginPage />} />
+          <Route path="/signup"          element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLoginPage />} />

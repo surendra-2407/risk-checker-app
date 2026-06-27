@@ -5,6 +5,7 @@ const { scanCode } = require('../engine/scanner');
 const { calculateRiskScore } = require('../engine/scorer');
 const Commit = require('../models/Commit');
 const Issue = require('../models/Issue');
+const { sendWebhookScanEmail } = require('../services/emailService');
 
 /**
  * POST /api/webhooks/github
@@ -86,6 +87,16 @@ router.post('/github', async (req, res) => {
         
         await dbCommit.save();
         console.log(`✅ Webhook Commit ${commitId.slice(0, 8)} saved with Risk Score: ${score}`);
+
+        // Notify the commit author by email (fire-and-forget)
+        if (email) {
+          sendWebhookScanEmail(
+            email,
+            developer,
+            { repository, branch, commitId },
+            { score, level, commit_allowed, counts }
+          ).catch(() => {});
+        }
       }
     } else {
       res.status(200).json({ message: 'No commits to process.' });
