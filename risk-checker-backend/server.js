@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const https = require('https');
@@ -65,8 +66,9 @@ const app = express();
 // Trust proxy for Render/Heroku deployments so express-rate-limit gets correct IP
 app.set('trust proxy', 1);
 
-// Security middleware
+// Security & Performance middleware
 app.use(helmet());
+app.use(compression());
 
 const frontendOrigin = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
 

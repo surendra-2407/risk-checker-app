@@ -18,7 +18,7 @@ const { sendScanResultEmail, sendCriticalAlertEmail } = require('../services/ema
  *   2. GitGuardian secret scan (replaces HaveIBeenPwned)
  *   3. Risk score calculation
  *   4. HuggingFace ML classification (secondary signal)
- *   5. OpenAI AI suggestions (top 3 issues)
+ *   5. Gemini AI suggestions (top 3 issues)
  *   6. Persist to MongoDB
  */
 router.post('/', async (req, res) => {
@@ -61,7 +61,7 @@ router.post('/', async (req, res) => {
     const { score, level, color, emoji, counts, commit_allowed } =
       calculateRiskScore(mergedIssues, { linesChanged: Number(linesChanged) });
 
-    // ── Step 4: OpenAI enrichment (top 3 issues by severity) ────────────────
+    // ── Step 4: Gemini AI enrichment (top 3 issues by severity) ─────────────
     const enrichedIssues = await enrichWithAI(mergedIssues, 3);
 
     // ── Step 5: Persist to MongoDB ───────────────────────────────────────────

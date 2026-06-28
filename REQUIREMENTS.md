@@ -50,13 +50,14 @@ Install with: `cd risk-checker-frontend && npm install`
 
 ## 🔑 API Keys Required
 
-Copy `risk-checker-backend/.env.example` → `risk-checker-backend/.env` and fill in:
+### Backend — Copy `.env.example` → `.env` and fill in:
 
 ```env
 # ── Server ──────────────────────────────────────────────────────────────────
 PORT=5000
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
+# Production: FRONTEND_URL=https://risk-checker-app.vercel.app
 
 # ── Database ─────────────────────────────────────────────────────────────────
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/risk-checker?retryWrites=true&w=majority
@@ -64,16 +65,31 @@ MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/risk-checke
 
 # ── JWT Secret ───────────────────────────────────────────────────────────────
 JWT_SECRET=your-super-secret-jwt-key-here
-# Any long random string, e.g.: openssl rand -hex 32
+# Generate one: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
-# ── AI / LLM ─────────────────────────────────────────────────────────────────
-OPENAI_API_KEY=sk-proj-your-openai-key-here
-# Get from: https://platform.openai.com/api-keys
+# ── AI / LLM (Google Gemini) ─────────────────────────────────────────────────
+GEMINI_API_KEY=AIzaSy...
+# Get from: https://aistudio.google.com → Get API Key
 
-# ── GitHub Integration ────────────────────────────────────────────────────────
+# ── GitHub OAuth + Personal Token ────────────────────────────────────────────
 GITHUB_TOKEN=ghp_your-github-token-here
 # Get from: https://github.com/settings/tokens → Generate new token (classic)
 # Required scopes: repo, read:user
+
+GITHUB_CLIENT_ID=your-github-oauth-app-client-id
+GITHUB_CLIENT_SECRET=your-github-oauth-app-client-secret
+# Development: use Development OAuth App credentials (http://localhost:5000 callback)
+# Production:  use Production OAuth App credentials (https://risk-checker-app-1.onrender.com callback)
+GITHUB_CALLBACK_URL=http://localhost:5000/api/auth/github/callback
+
+GITHUB_WEBHOOK_SECRET=your-webhook-secret
+# Optional — set in GitHub → Settings → Webhooks → Secret for HMAC verification
+
+# ── Google OAuth ──────────────────────────────────────────────────────────────
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
+# Get from: https://console.cloud.google.com → APIs & Services → Credentials
+GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
 
 # ── ML Classification (HuggingFace) ──────────────────────────────────────────
 HUGGINGFACE_API_KEY=hf_your-huggingface-key-here
@@ -83,9 +99,25 @@ HUGGINGFACE_API_KEY=hf_your-huggingface-key-here
 GITGUARDIAN_API_KEY=your-gitguardian-api-key-here
 # Get from: https://dashboard.gitguardian.com/api → Create API key
 
-# ── Email Service (Brevo / SendinBlue) ───────────────────────────────────────
+# ── Email Service (Brevo) ─────────────────────────────────────────────────────
 BREVO_API_KEY=xkeysib-your-brevo-api-key-here
 # Get from: https://app.brevo.com/settings/keys/api → Create new API key
+BREVO_FROM_EMAIL=you@gmail.com
+BREVO_FROM_NAME=Risk Checker
+
+# ── Admin Account Seed ────────────────────────────────────────────────────────
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=YourAdminPassword
+```
+
+### Frontend — `risk-checker-frontend/.env`:
+
+```env
+# Development:
+VITE_API_URL=http://localhost:5000
+
+# Production (Vercel):
+# VITE_API_URL=https://risk-checker-app-1.onrender.com
 ```
 
 > ⚠️ **Never commit your `.env` file to GitHub.** It is already in `.gitignore`.
@@ -145,3 +177,4 @@ risk-checker-app/
 ├── render.yaml                 # Render.com deployment config
 └── REQUIREMENTS.md             # ← This file
 ```
+

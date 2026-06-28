@@ -1,4 +1,5 @@
 services:
+  # ── Frontend (Static Site on Render) ────────────────────────────────────────
   - type: web
     runtime: static
     name: risk-checker-frontend
@@ -11,24 +12,28 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        sync: false
+        sync: false                       # e.g. https://risk-checker-app-1.onrender.com
 
+  # ── Backend (Node.js Web Service on Render) ──────────────────────────────────
   - type: web
     name: risk-checker-backend
     env: node
+    plan: free
     rootDir: risk-checker-backend
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /api/health
+
     envVars:
       # ── Core ────────────────────────────────────────────────────────────────
       - key: NODE_ENV
         value: production
       - key: FRONTEND_URL
-        sync: false                       # e.g. https://your-app.vercel.app
+        sync: false                       # e.g. https://risk-checker-app.vercel.app
 
       # ── Database ─────────────────────────────────────────────────────────────
       - key: MONGODB_URI
-        sync: false
+        sync: false                       # From MongoDB Atlas → Connect → Node.js driver
 
       # ── Security ─────────────────────────────────────────────────────────────
       - key: JWT_SECRET
@@ -36,31 +41,31 @@ services:
 
       # ── AI / LLM ─────────────────────────────────────────────────────────────
       - key: GEMINI_API_KEY
-        sync: false
+        sync: false                       # From aistudio.google.com
 
       # ── Secret Detection ──────────────────────────────────────────────────────
       - key: GITGUARDIAN_API_KEY
-        sync: false
+        sync: false                       # From dashboard.gitguardian.com
 
       # ── ML Classification ─────────────────────────────────────────────────────
       - key: HUGGINGFACE_API_KEY
-        sync: false
+        sync: false                       # From huggingface.co/settings/tokens
 
       # ── GitHub OAuth ─────────────────────────────────────────────────────────
       - key: GITHUB_TOKEN
         sync: false
       - key: GITHUB_CLIENT_ID
-        sync: false
+        sync: false                       # Use Production OAuth App credentials
       - key: GITHUB_CLIENT_SECRET
         sync: false
       - key: GITHUB_CALLBACK_URL
         sync: false                       # https://risk-checker-app-1.onrender.com/api/auth/github/callback
       - key: GITHUB_WEBHOOK_SECRET
-        sync: false
+        sync: false                       # Optional — set if using GitHub webhook signature verification
 
       # ── Google OAuth ──────────────────────────────────────────────────────────
       - key: GOOGLE_CLIENT_ID
-        sync: false
+        sync: false                       # Use Production OAuth App credentials
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_CALLBACK_URL
@@ -68,7 +73,7 @@ services:
 
       # ── Email (Brevo) ─────────────────────────────────────────────────────────
       - key: BREVO_API_KEY
-        sync: false
+        sync: false                       # From app.brevo.com
       - key: BREVO_FROM_EMAIL
         sync: false
       - key: BREVO_FROM_NAME
@@ -79,3 +84,4 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+

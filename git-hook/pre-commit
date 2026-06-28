@@ -127,8 +127,8 @@ echo ""
 if [ "$COMMIT_ALLOWED" = "false" ] || [ "$RISK_SCORE" -gt 50 ] 2>/dev/null; then
   echo "⛔ COMMIT BLOCKED — Risk score ($RISK_SCORE) exceeds threshold (50)"
   echo ""
-  echo "   → View detailed report at: http://localhost:5173/results"
-  echo "   → Fix issues and try again, or run:"
+  echo "   → View full report at: https://risk-checker-app.vercel.app/results"
+  echo "   → Fix the issues above and try again, or run:"
   echo "     git commit --no-verify   (force commit, NOT recommended)"
   echo ""
   exit 1
