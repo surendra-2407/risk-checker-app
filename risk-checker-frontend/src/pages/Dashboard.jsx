@@ -6,7 +6,7 @@ import {
   ResponsiveContainer, CartesianGrid, XAxis, YAxis, Legend
 } from 'recharts'
 import {
-  Shield, TrendingUp, AlertTriangle, Ban, Zap, Clock, ChevronRight, Download
+  Shield, TrendingUp, AlertTriangle, Ban, Zap, Clock, ChevronRight, Download, User
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -63,6 +63,10 @@ export default function Dashboard() {
   const [stats, setStats]     = useState(null)
   const [commits, setCommits] = useState([])
   const [loading, setLoading] = useState(true)
+  const [userScans, setUserScans] = useState(null)
+
+  const userName = localStorage.getItem('user_name') || 'You'
+  const userEmail = localStorage.getItem('user_email') || ''
 
   useEffect(() => {
     const load = async () => {
@@ -73,6 +77,16 @@ export default function Dashboard() {
         ])
         setStats(sRes.data)
         setCommits(cRes.data.commits || [])
+
+        // Fetch user-specific scan count by filtering by developer email/name
+        try {
+          const uRes = await axios.get(apiUrl('/api/commits/stats'), {
+            params: { developer: userEmail || userName }
+          })
+          setUserScans(uRes.data?.total_scans ?? null)
+        } catch {
+          setUserScans(null)
+        }
       } catch {
         setStats(EMPTY_STATS)
         setCommits([])
@@ -164,11 +178,12 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={Shield}       label="Total Scans"         value={s.total_scans}            sub="all time"   color="#3b82f6" />
-        <StatCard icon={Ban}          label="Commits Blocked"     value={s.commits_blocked}         sub="prevented"  color="#ef4444" />
-        <StatCard icon={TrendingUp}   label="Avg Risk Score"      value={s.average_risk_score?.toFixed(1)} sub="0–100 scale" color="#eab308" />
-        <StatCard icon={AlertTriangle} label="Critical Issues"    value={s.total_critical_issues}   sub="total found" color="#f97316" />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <StatCard icon={Shield}        label="Total Scans"     value={s.total_scans}                        sub="all time"    color="#3b82f6" />
+        <StatCard icon={User}          label="Your Scans"      value={userScans !== null ? userScans : '—'}  sub={userName}    color="#10b981" />
+        <StatCard icon={Ban}           label="Commits Blocked"  value={s.commits_blocked}                    sub="prevented"   color="#ef4444" />
+        <StatCard icon={TrendingUp}    label="Avg Risk Score"   value={s.average_risk_score?.toFixed(1)}     sub="0–100 scale" color="#eab308" />
+        <StatCard icon={AlertTriangle} label="Critical Issues"  value={s.total_critical_issues}              sub="total found" color="#f97316" />
       </div>
 
       {/* Charts Row */}

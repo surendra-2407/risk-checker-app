@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { Shield, KeyRound, User, ChevronRight, Github, Mail } from 'lucide-react'
+import { Shield, KeyRound, User, ChevronRight, Github, Mail, Eye, EyeOff } from 'lucide-react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { apiUrl } from '../lib/api'
@@ -14,6 +14,7 @@ export default function SignupPage() {
   const [sentTo, setSentTo]     = useState('')
   const [otp, setOtp]           = useState('')
   const [verifying, setVerifying] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -208,19 +209,28 @@ export default function SignupPage() {
           </div>
 
           {/* Password */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-700 ml-1">Password</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-700 ml-0.5">Password</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                 <KeyRound size={16} className="text-slate-400" />
               </div>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl py-3 pl-10 pr-4 text-sm text-slate-900 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all placeholder:text-slate-400 shadow-sm"
+                placeholder="Min. 6 characters"
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl py-3 pl-10 pr-11 text-sm text-slate-900 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all placeholder:text-slate-400 shadow-sm"
+                autoComplete="new-password"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
 

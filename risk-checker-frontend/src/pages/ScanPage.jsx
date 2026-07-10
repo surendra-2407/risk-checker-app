@@ -6,40 +6,63 @@ import { Upload, Zap, Code2, Github, Link2, FileCode } from 'lucide-react'
 import { apiUrl } from '../lib/api'
 
 const DEMO_SNIPPETS = {
-  'Leaked Passwords & API Keys': `const api_key = "SAFE_DEMO_KEY";
-const DB_PASSWORD = "SAFE_DEMO_PASSWORD";
-const github_token = "SAFE_DEMO_TOKEN";
+  'Leaked Passwords & API Keys': `// Hardcoded AWS Access Key
+const AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE";
 
-function processInput(userInput) {
-  return eval(userInput);  // dangerous!
-}
+// Hardcoded GitHub Personal Access Token
+const github_token = "ghp_16C7e42k29206d203f9011X1Y0O0C0Z0L0I0";
 
-console.log("Connected with key:", api_key);`,
+// Hardcoded Database Credentials
+const DB_PASSWORD = "super_secret_password_123";
 
-  'Database Hacks (SQLi)': `app.get('/users', (req, res) => {
-  const name = req.query.name;
-  const query = "SELECT * FROM users WHERE name = " + name;
-  db.execute(query, (err, rows) => res.json(rows));
+function authenticateUser() {
+  console.log("Authenticating with:", AWS_ACCESS_KEY_ID);
+}`,
+
+  'Database Hacks (SQLi)': `const express = require('express');
+const db = require('./database');
+const app = express();
+
+app.get('/users', (req, res) => {
+  const username = req.query.username;
+  
+  // Vulnerable to SQL Injection
+  const query = "SELECT * FROM users WHERE username = '" + username + "'";
+  
+  db.execute(query, (err, rows) => {
+    res.json(rows);
+  });
 });`,
 
-  'Malicious Script Injection': `function renderUserContent(data) {
-  document.getElementById('app').innerHTML = data.html;
-  document.write('<h1>' + data.title + '</h1>');
+  'Malicious Script Injection': `const { exec } = require('child_process');
+
+function handleUpload(req, res) {
+  const dirName = req.body.dirName;
+  
+  // Vulnerable to Command Injection
+  exec('mkdir /uploads/' + dirName, (err, stdout) => {
+    res.send("Directory created");
+  });
 }
 
-const { exec } = require('child_process');
-exec('ls ' + req.body.path, (err, stdout) => {
-  res.send(stdout);
-});`,
+function renderContent(userData) {
+  // Vulnerable to Cross-Site Scripting (XSS)
+  document.getElementById('profile').innerHTML = userData.bio;
+}`,
 
-  'Dangerous Configurations': `import bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+  'Dangerous Configurations': `const crypto = require('crypto');
 
-const apiKey = process.env.API_KEY;
-const sessionToken = randomBytes(32).toString('hex');
+// Insecure legacy cryptographic algorithm (DES)
+const cipher = crypto.createCipher('des', 'weak_key');
 
-async function hashPassword(password) {
-  return bcrypt.hash(password, 12);
+// Insecure hashing algorithm (MD5)
+function hashPassword(pwd) {
+  return crypto.createHash('md5').update(pwd).digest('hex');
+}
+
+// Insecure random number generator for tokens
+function generateResetToken() {
+  return Math.random().toString(36).substring(7);
 }
 `
 }

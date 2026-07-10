@@ -132,18 +132,24 @@ export default function LandingPage() {
         </div>
         <div className="flex flex-col md:flex-row items-start gap-0">
           {FLOW_STEPS.map((s, i) => (
-            <div key={s.step} className="flex md:flex-col items-start md:items-center gap-4 md:gap-2 flex-1">
-              <div className="flex flex-col md:flex-row items-center gap-0 w-full">
-                <div className="w-12 h-12 rounded-full bg-blue-600/20 border-2 border-blue-500/40 flex items-center justify-center text-blue-400 font-black text-sm flex-shrink-0 glow-blue">
-                  {s.step}
+            <div key={s.step} className="flex md:flex-col items-start md:items-center gap-4 md:gap-2 flex-1 min-w-0">
+              {/* Circle + connector row */}
+              <div className="flex flex-row items-center w-full">
+                {/* Circle — always centered within its flex-1 column */}
+                <div className="flex items-center justify-center flex-shrink-0 md:flex-1">
+                  <div className="w-12 h-12 rounded-full bg-blue-600/20 border-2 border-blue-500/40 flex items-center justify-center text-blue-400 font-black text-sm glow-blue">
+                    {s.step}
+                  </div>
                 </div>
+                {/* Connector line — only between steps, not after the last */}
                 {i < FLOW_STEPS.length - 1 && (
                   <div className="hidden md:block flex-1 h-0.5 bg-gradient-to-r from-blue-500/40 to-slate-700" />
                 )}
               </div>
-              <div className="md:text-center mt-0 md:mt-3 px-2">
-                <p className="text-sm font-bold text-slate-900">{s.label}</p>
-                <p className="text-xs text-slate-600 mt-0.5">{s.desc}</p>
+              {/* Label + description — centered under the circle */}
+              <div className="md:w-full md:text-center mt-0 md:mt-3 px-1">
+                <p className="text-sm font-bold text-slate-900 leading-snug">{s.label}</p>
+                <p className="text-xs text-slate-500 mt-1 leading-snug">{s.desc}</p>
               </div>
             </div>
           ))}

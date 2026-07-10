@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { Shield, KeyRound, Mail, ArrowRight } from 'lucide-react'
+import { Shield, KeyRound, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { apiUrl } from '../lib/api'
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const navigate = useNavigate()
 
   const handleLogin = async (e) => {
@@ -45,32 +46,48 @@ export default function AdminLoginPage() {
           <p className="text-sm font-medium" style={{ color: 'var(--critical)' }}>Restricted Access Area</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wide mb-2 block" style={{ color: 'var(--text-label)' }}>Admin Email</label>
+        <form onSubmit={handleLogin} className="space-y-5">
+          {/* Email */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold uppercase tracking-widest block" style={{ color: 'var(--text-label)' }}>Admin Email</label>
             <div className="relative">
-              <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Mail size={15} className="text-slate-400" />
+              </div>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-dark w-full pl-10 pr-4 py-3"
+                className="input-dark w-full pl-10 pr-4 py-3 rounded-xl text-sm"
                 placeholder="admin@riskchecker.dev"
+                autoComplete="email"
               />
             </div>
           </div>
 
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wide mb-2 block" style={{ color: 'var(--text-label)' }}>Password</label>
+          {/* Password */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold uppercase tracking-widest block" style={{ color: 'var(--text-label)' }}>Password</label>
             <div className="relative">
-              <KeyRound size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <KeyRound size={15} className="text-slate-400" />
+              </div>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-dark w-full pl-10 pr-4 py-3"
+                className="input-dark w-full pl-10 pr-11 py-3 rounded-xl text-sm"
                 placeholder="••••••••"
+                autoComplete="current-password"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
 
