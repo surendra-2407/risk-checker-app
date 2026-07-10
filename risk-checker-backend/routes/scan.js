@@ -167,8 +167,10 @@ router.post('/', async (req, res) => {
  *   https://raw.githubusercontent.com/owner/repo/branch/path/to/file.js
  */
 router.post('/github-url', async (req, res) => {
+  // NOTE: email param is optional — user can pass it in the body
+  // to receive a scan-result notification just like the main /api/scan route.
   try {
-    const { githubUrl, developer = 'Anonymous' } = req.body;
+    const { githubUrl, developer = 'Anonymous', email = '' } = req.body;
 
     if (!githubUrl) {
       return res.status(400).json({ error: 'GitHub URL is required.' });
@@ -280,6 +282,42 @@ router.post('/github-url', async (req, res) => {
         low:      allIssues.filter(i => i.severity === 'low').length,
       }
     });
+
+    // ── Fire-and-forget emails (after response sent) ────────────────────────
+    if (email) {
+      const scanLevelRaw = calculateRiskScore(allIssues);
+      // calculateRiskScore returns a number here — derive level label
+      const numericScore = typeof riskScore === 'object' ? riskScore.score : riskScore;
+      const criticalCount = allIssues.filter(i => (i.severity || '').toLowerCase() === 'critical').length;
+      const severity_counts = {
+        Critical: criticalCount,
+        High:     allIssues.filter(i => (i.severity || '').toLowerCase() === 'high').length,
+        Medium:   allIssues.filter(i => (i.severity || '').toLowerCase() === 'medium').length,
+        Low:      allIssues.filter(i => (i.severity || '').toLowerCase() === 'low').length,
+      };
+      // Derive level label from numeric score
+      const riskLevelLabel =
+        numericScore >= 75 ? 'Critical' :
+        numericScore >= 50 ? 'High' :
+        numericScore >= 25 ? 'Medium' : 'Low';
+
+      const scanData = {
+        risk_score: numericScore,
+        risk_level: riskLevelLabel,
+        commit_allowed: commitAllowed,
+        repository: `${owner}/${repo}`,
+        branch,
+        fileName,
+        severity_counts,
+        issues: allIssues,
+        timestamp: new Date().toISOString()
+      };
+      sendScanResultEmail(email, developer, scanData).catch(() => {});
+      if (riskLevelLabel === 'Critical' || criticalCount > 0) {
+        sendCriticalAlertEmail(email, developer, scanData).catch(() => {});
+      }
+    }
+
   } catch (err) {
     console.error('[GitHub URL Scan] Error:', err);
     res.status(500).json({ error: 'GitHub scan failed.', message: err.message });

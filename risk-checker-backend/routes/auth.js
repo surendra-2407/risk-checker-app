@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
+const { sendLoginNotificationEmail } = require('../services/emailService');
 
 /**
  * GET /api/auth/github
@@ -35,7 +36,7 @@ router.get('/github', (req, res) => {
 
   console.log('[GitHub OAuth] redirect_uri:', redirectUri);
   const state = encodeURIComponent(frontendUrl);
-  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user&state=${state}`;
+  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email&state=${state}`;
   res.redirect(githubAuthUrl);
 });
 
@@ -79,9 +80,31 @@ router.get('/github/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${access_token}`, Accept: 'application/json' }
     });
     const profile = userRes.data;
+
+    // Some GitHub accounts hide their email on the /user endpoint.
+    // Fall back to /user/emails to get the primary verified email.
+    let primaryEmail = profile.email || '';
+    if (!primaryEmail) {
+      try {
+        const emailsRes = await axios.get('https://api.github.com/user/emails', {
+          headers: { Authorization: `Bearer ${access_token}`, Accept: 'application/json' }
+        });
+        const primary = emailsRes.data.find(e => e.primary && e.verified);
+        primaryEmail = primary?.email || emailsRes.data[0]?.email || '';
+      } catch (_) {
+        // silently ignore — email stays empty
+      }
+    }
+
     const name   = encodeURIComponent(profile.name || profile.login || 'GitHub User');
-    const email  = encodeURIComponent(profile.email || '');
+    const email  = encodeURIComponent(primaryEmail);
     const avatar = encodeURIComponent(profile.avatar_url || '');
+
+    // 🔐 Fire-and-forget login notification — now always fires if email is available
+    if (primaryEmail) {
+      const resetUrl = `${frontendUrl}/forgot-password`;
+      sendLoginNotificationEmail(primaryEmail, profile.name || profile.login || 'GitHub User', { provider: 'github', resetUrl }).catch(() => {});
+    }
 
     res.redirect(`${frontendUrl}/login?token=${access_token}&provider=github&name=${name}&email=${email}&avatar=${avatar}`);
   } catch (error) {
@@ -186,6 +209,12 @@ router.get('/google/callback', async (req, res) => {
     const name   = encodeURIComponent(profile.name || 'Google User');
     const email  = encodeURIComponent(profile.email || '');
     const avatar = encodeURIComponent(profile.picture || '');
+
+    // 🔐 Fire-and-forget login notification
+    if (profile.email) {
+      const resetUrl = `${frontendUrl}/forgot-password`;
+      sendLoginNotificationEmail(profile.email, profile.name || 'Google User', { provider: 'google', resetUrl }).catch(() => {});
+    }
 
     res.redirect(`${frontendUrl}/login?token=${access_token}&provider=google&name=${name}&email=${email}&avatar=${avatar}`);
   } catch (error) {

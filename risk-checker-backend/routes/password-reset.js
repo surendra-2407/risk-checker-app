@@ -40,7 +40,15 @@ router.post('/forgot-password', async (req, res) => {
     const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(user.email)}`;
 
-    await sendPasswordResetEmail(user.email, user.name, resetUrl);
+    console.log(`📧 Sending password reset email to: ${user.email}`);
+    console.log(`🔗 Reset URL: ${resetUrl}`);
+    const emailSent = await sendPasswordResetEmail(user.email, user.name, resetUrl);
+    if (!emailSent) {
+      console.error(`❌ [Forgot Password] Email delivery FAILED for ${user.email}. Check Brevo sender identity and API key.`);
+      // Still return success to avoid email enumeration, but log the failure
+    } else {
+      console.log(`✅ [Forgot Password] Reset email sent to ${user.email}`);
+    }
 
     res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
   } catch (err) {

@@ -73,7 +73,7 @@ async function classifyCodeRisk(code) {
       resolve(null);
     });
 
-    req.setTimeout(10000, () => {
+    req.setTimeout(3500, () => {
       console.warn('[HuggingFace] Timeout.');
       req.destroy();
       resolve(null);

@@ -1,4 +1,4 @@
-const { BrevoClient } = require('@getbrevo/brevo');
+﻿const { BrevoClient } = require('@getbrevo/brevo');
 
 const client   = new BrevoClient({ apiKey: process.env.BREVO_API_KEY });
 const FROM_EMAIL = process.env.BREVO_FROM_EMAIL || 'noreply@riskchecker.dev';
@@ -19,11 +19,20 @@ function riskEmoji(level) {
 
 async function send(emailData) {
   try {
-    await client.transactionalEmails.sendTransacEmail(emailData);
+    const result = await client.transactionalEmails.sendTransacEmail(emailData);
     console.log(`✅ Email sent → ${emailData.to[0].email} [${emailData.subject}]`);
     return true;
   } catch (err) {
     console.error('❌ Brevo email error:', err.message || err);
+    // Log full error body for debugging (Brevo often returns a detailed body)
+    if (err.response?.body) {
+      console.error('❌ Brevo error body:', JSON.stringify(err.response.body, null, 2));
+    } else if (err.body) {
+      console.error('❌ Brevo error body:', JSON.stringify(err.body, null, 2));
+    } else {
+      console.error('❌ Brevo full error:', JSON.stringify(err, null, 2));
+    }
+    console.error(`❌ Email FAILED → to: ${emailData.to?.[0]?.email}, from: ${emailData.sender?.email}, subject: ${emailData.subject}`);
     return false;
   }
 }
@@ -32,6 +41,7 @@ async function send(emailData) {
 // 1. Verification OTP Email
 // ─────────────────────────────────────────────────────────────────────────────
 async function sendVerificationEmail(toEmail, toName, otpCode) {
+  console.log(`\n📧 [DEV MODE] Verification OTP for ${toEmail}: ${otpCode}\n`);
   return send({
     sender: { email: FROM_EMAIL, name: FROM_NAME },
     to: [{ email: toEmail, name: toName }],
@@ -587,6 +597,7 @@ async function sendWeeklyDigestEmail(toEmail, toName, stats) {
 // 7. Password Reset Email
 // ───────────────────────────────────────────────────────────────────────────────
 async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
+  console.log(`\n📧 [DEV MODE] Password Reset Link for ${toEmail}: ${resetUrl}\n`);
   return send({
     sender: { email: FROM_EMAIL, name: FROM_NAME },
     to: [{ email: toEmail, name: toName || 'User' }],
@@ -641,6 +652,107 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 7. Login Notification Email
+// ─────────────────────────────────────────────────────────────────────────────
+async function sendLoginNotificationEmail(toEmail, toName, { provider = 'password', time, resetUrl }) {
+  const providerLabel = provider === 'github' ? '🐙 GitHub' : provider === 'google' ? '🔵 Google' : '🔑 Email & Password';
+  const loginTime = time || new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'short' });
+  const safeResetUrl = resetUrl || `${(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '')}/forgot-password`;
+
+  return send({
+    sender: { email: FROM_EMAIL, name: FROM_NAME },
+    to: [{ email: toEmail, name: toName }],
+    subject: '🔐 New Login to Your Risk Checker Account',
+    htmlContent: `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#0f172a;font-family:Inter,-apple-system,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:40px 20px;">
+
+      <table width="580" cellpadding="0" cellspacing="0" style="background:#1e293b;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#15803d,#1DB954);padding:32px 40px;text-align:center;">
+            <div style="margin-bottom:12px;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="56" height="56" style="display:inline-block;"><rect width="100" height="100" rx="22" ry="22" fill="rgba(255,255,255,0.15)"/><path d="M50 15 L78 26 L78 50 C78 66 65 78 50 84 C35 78 22 66 22 50 L22 26 Z" fill="white" opacity="0.95"/><polyline points="36,50 46,60 64,40" fill="none" stroke="#1DB954" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="78" cy="22" r="10" fill="#A8F7C1"/><circle cx="78" cy="22" r="6" fill="#00C957"/></svg></div>
+            <h1 style="color:#fff;font-size:22px;margin:0;font-weight:700;letter-spacing:-0.5px;">New Login Detected</h1>
+            <p style="color:#a7f3d0;font-size:13px;margin:6px 0 0;">Risk Checker Security Alert</p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:36px 40px 28px;">
+            <h2 style="color:#e2e8f0;font-size:18px;margin:0 0 12px;">Hi ${toName || 'there'} 👋</h2>
+            <p style="color:#94a3b8;font-size:14px;line-height:1.7;margin:0 0 24px;">
+              We noticed a successful login to your Risk Checker account. Here are the details:
+            </p>
+
+            <!-- Login Details Card -->
+            <div style="background:#0f172a;border-radius:12px;padding:20px 24px;border:1px solid #334155;margin-bottom:24px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:8px 0;border-bottom:1px solid #1e293b;">
+                    <span style="color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Login Method</span><br>
+                    <span style="color:#e2e8f0;font-size:15px;font-weight:600;">${providerLabel}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;border-bottom:1px solid #1e293b;">
+                    <span style="color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Time (IST)</span><br>
+                    <span style="color:#e2e8f0;font-size:15px;font-weight:600;">${loginTime}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;">
+                    <span style="color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Account</span><br>
+                    <span style="color:#e2e8f0;font-size:15px;font-weight:600;">${toEmail}</span>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Security Notice -->
+            <div style="background:#1c1917;border:1px solid #78350f;border-radius:10px;padding:16px 20px;margin-bottom:24px;">
+              <p style="color:#fbbf24;font-size:13px;margin:0;font-weight:600;">⚠️ Wasn't this you?</p>
+              <p style="color:#d97706;font-size:13px;margin:6px 0 0;line-height:1.6;">
+                If you didn't log in, your account may be compromised. Reset your password immediately.
+              </p>
+            </div>
+
+            <!-- Create New Password Button - always visible -->
+            <div style="text-align:center;margin-bottom:20px;">
+              <a href="${safeResetUrl}"
+                 style="display:inline-block;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;">
+                Create New Password
+              </a>
+            </div>
+
+            <!-- If this was you reassurance -->
+            <div style="background:#0f2a1a;border:1px solid #166534;border-radius:10px;padding:14px 20px;">
+              <p style="color:#4ade80;font-size:13px;margin:0;font-weight:600;">If this login was you</p>
+              <p style="color:#86efac;font-size:13px;margin:6px 0 0;line-height:1.6;">
+                No action needed - you're all set! This is just a security notification to keep your account safe.
+              </p>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:16px 40px 28px;border-top:1px solid #1e293b;text-align:center;">
+            <p style="color:#475569;font-size:12px;margin:0;">If this was you, no action is needed. You're all set!</p>
+            <p style="color:#334155;font-size:11px;margin:8px 0 0;">© 2025 Risk Checker · Pre-Commit Security Scanner</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 module.exports = {
   sendVerificationEmail,
   sendWelcomeEmail,
@@ -649,4 +761,5 @@ module.exports = {
   sendWebhookScanEmail,
   sendWeeklyDigestEmail,
   sendPasswordResetEmail,
+  sendLoginNotificationEmail,
 };

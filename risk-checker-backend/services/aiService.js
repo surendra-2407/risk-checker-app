@@ -117,11 +117,17 @@ async function enrichWithAI(issues, maxIssues = 3) {
   const enriched = [...issues];
   const limit    = Math.min(maxIssues, enriched.length);
 
+  // Run AI enrichment in parallel to drastically speed up scan time
+  const enrichmentPromises = [];
   for (let i = 0; i < limit; i++) {
-    const suggestion = await getAISuggestion(enriched[i]);
-    enriched[i]      = { ...enriched[i], ...suggestion };
-    if (i < limit - 1) await delay(1200); // Stay under 15 RPM free tier
+    enrichmentPromises.push(
+      getAISuggestion(enriched[i]).then(suggestion => {
+        enriched[i] = { ...enriched[i], ...suggestion };
+      })
+    );
   }
+
+  await Promise.all(enrichmentPromises);
 
   return enriched;
 }

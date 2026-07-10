@@ -18,6 +18,7 @@ const signupRoutes       = require('./routes/signup');
 const adminRoutes        = require('./routes/admin');
 const passwordResetRoutes = require('./routes/password-reset');
 const { sendWeeklyDigestEmail } = require('./services/emailService');
+const cron = require('node-cron');
 
 // ── STARTUP ENV VALIDATION ───────────────────────────────────────────────────
 function validateEnv() {
@@ -164,12 +165,13 @@ mongoose.connect(MONGODB_URI, {
 // (i.e. on Render). Completely silent on failure — never affects the site.
 function startKeepAlive() {
   const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
-  if (!RENDER_URL) {
-    console.log('ℹ️  Keep-alive disabled (not running on Render)');
-    return;
+  let pingUrl;
+  if (RENDER_URL) {
+    pingUrl = `${RENDER_URL.replace(/\/+$/, '')}/api/health`;
+  } else {
+    pingUrl = `http://localhost:${PORT}/api/health`;
   }
 
-  const pingUrl = `${RENDER_URL.replace(/\/+$/, '')}/api/health`;
   const isHttps  = pingUrl.startsWith('https');
   const client   = isHttps ? https : http;
 
@@ -204,30 +206,10 @@ function startKeepAlive() {
 
 // ── WEEKLY DIGEST CRON ──────────────────────────────────────────────────────
 // Sends every verified user a personalised weekly digest every Monday at 9am IST.
-// Uses plain setInterval — no extra dependency needed.
+// IST = UTC+5:30, so 9:00am IST = 3:30am UTC → cron: "30 3 * * 1"
+// Uses node-cron so the schedule survives server restarts reliably.
 function startWeeklyDigest() {
-  const CHECK_INTERVAL_MS = 60 * 60 * 1000; // check every hour
-
-  const shouldSendNow = () => {
-    // IST = UTC+5:30
-    const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-    return now.getDay() === 1 && now.getHours() === 9 && now.getMinutes() < 60;
-  };
-
-  let lastSentWeek = -1; // tracks ISO week number to avoid double-send
-
-  const getISOWeek = (d) => {
-    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
-    return Math.ceil((((date - new Date(Date.UTC(date.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7);
-  };
-
   const runDigest = async () => {
-    if (!shouldSendNow()) return;
-    const thisWeek = getISOWeek(new Date());
-    if (thisWeek === lastSentWeek) return; // already sent this week
-    lastSentWeek = thisWeek;
-
     console.log('📧 Weekly digest: starting...');
     try {
       const User   = require('./models/User');
@@ -236,6 +218,7 @@ function startWeeklyDigest() {
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       const users   = await User.find({ isVerified: true, email: { $exists: true } });
 
+      let sentCount = 0;
       for (const user of users) {
         try {
           const commits = await Commit.find({
@@ -262,18 +245,20 @@ function startWeeklyDigest() {
             totalScans, blockedCommits, allowedCommits,
             criticalCount, highCount, avgRiskScore, topRepository
           });
+          sentCount++;
         } catch (_) {
           // skip individual user errors silently
         }
       }
-      console.log(`✅ Weekly digest sent to ${users.length} users.`);
+      console.log(`✅ Weekly digest sent to ${sentCount} active users (${users.length} total verified).`);
     } catch (err) {
       console.error('❌ Weekly digest error:', err.message);
     }
   };
 
-  setInterval(runDigest, CHECK_INTERVAL_MS);
-  console.log('📅 Weekly digest scheduler started (fires every Monday 9am IST)');
+  // Every Monday at 3:30am UTC = 9:00am IST
+  cron.schedule('30 3 * * 1', runDigest, { timezone: 'UTC' });
+  console.log('📅 Weekly digest cron started — fires every Monday 9:00am IST (3:30am UTC)');
 }
 
 module.exports = app;

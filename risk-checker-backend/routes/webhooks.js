@@ -5,7 +5,7 @@ const { scanCode } = require('../engine/scanner');
 const { calculateRiskScore } = require('../engine/scorer');
 const Commit = require('../models/Commit');
 const Issue = require('../models/Issue');
-const { sendWebhookScanEmail } = require('../services/emailService');
+const { sendWebhookScanEmail, sendCriticalAlertEmail } = require('../services/emailService');
 
 /**
  * POST /api/webhooks/github
@@ -96,6 +96,22 @@ router.post('/github', async (req, res) => {
             { repository, branch, commitId },
             { score, level, commit_allowed, counts }
           ).catch(() => {});
+
+          // Also send a Critical alert if risk warrants it
+          if (level === 'Critical' || (counts.Critical && counts.Critical > 0)) {
+            sendCriticalAlertEmail(
+              email,
+              developer,
+              {
+                risk_score: score,
+                repository,
+                branch,
+                fileName: 'webhook-patch',
+                issues: regexIssues,
+                timestamp: new Date().toISOString()
+              }
+            ).catch(() => {});
+          }
         }
       }
     } else {

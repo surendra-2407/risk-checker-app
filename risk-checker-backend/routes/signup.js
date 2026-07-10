@@ -2,8 +2,9 @@ const express = require('express');
 const router  = express.Router();
 const bcrypt  = require('bcryptjs');
 const crypto  = require('crypto');
+const jwt     = require('jsonwebtoken');
 const User    = require('../models/User');
-const { sendVerificationEmail, sendWelcomeEmail } = require('../services/emailService');
+const { sendVerificationEmail, sendWelcomeEmail, sendLoginNotificationEmail } = require('../services/emailService');
 
 /**
  * POST /api/auth/signup
@@ -103,6 +104,75 @@ router.post('/verify-code', async (req, res) => {
   } catch (err) {
     console.error('[Verify Code] Error:', err.message);
     res.status(500).json({ error: 'Verification failed.' });
+  }
+});
+
+/**
+ * POST /api/auth/login
+ * Body: { email, password }
+ * Validates credentials, checks isVerified, returns JWT + user info.
+ */
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    // Block OAuth-only users from password login
+    if (user.provider !== 'password' || !user.password) {
+      return res.status(401).json({
+        error: `This account uses ${user.provider} to log in. Please use the ${user.provider} login button.`
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({
+        error: 'Please verify your email address before logging in.',
+        needsVerification: true,
+        email: user.email
+      });
+    }
+
+    // Sign a JWT
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, name: user.name },
+      process.env.JWT_SECRET || 'fallback_secret',
+      { expiresIn: '7d' }
+    );
+
+    console.log(`✅ [Login] ${user.email} logged in successfully`);
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        name: user.name,
+        email: user.email,
+        provider: user.provider,
+        avatar: user.avatar || '',
+        isVerified: user.isVerified,
+      }
+    });
+
+    // 🔐 Fire-and-forget login notification email
+    const resetUrl = `${(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '')}/forgot-password`;
+    sendLoginNotificationEmail(user.email, user.name, { provider: 'password', resetUrl }).catch(() => {});
+  } catch (err) {
+    console.error('[Login] Error:', err.message);
+    res.status(500).json({ error: 'Login failed. Please try again.' });
   }
 });
 
