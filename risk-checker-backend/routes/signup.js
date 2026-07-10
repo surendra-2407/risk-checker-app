@@ -126,6 +126,10 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
+    if (user.status === 'suspended') {
+      return res.status(403).json({ error: 'Your account has been suspended by an administrator.' });
+    }
+
     // Block OAuth-only users from password login
     if (user.provider !== 'password' || !user.password) {
       return res.status(401).json({

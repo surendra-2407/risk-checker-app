@@ -6,6 +6,7 @@ const Admin = require('../models/Admin');
 const User = require('../models/User');
 const Commit = require('../models/Commit');
 const Issue = require('../models/Issue');
+const Setting = require('../models/Setting');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_admin_secret_key_123';
 
@@ -139,6 +140,54 @@ router.get('/users', requireAdmin, async (req, res) => {
 });
 
 /**
+ * PATCH /api/admin/users/:id/status
+ * Suspend or activate a user
+ */
+router.patch('/users/:id/status', requireAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['active', 'suspended'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    const user = await User.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ message: `User status updated to ${status}`, user });
+  } catch (err) {
+    console.error('[Admin User Status Error]', err);
+    res.status(500).json({ error: 'Failed to update user status' });
+  }
+});
+
+/**
+ * DELETE /api/admin/users/:id
+ * Permanently delete a user and their scans
+ */
+router.delete('/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // Find all commits by this user's email
+    const userCommits = await Commit.find({ developer_email: user.email });
+    const commitIds = userCommits.map(c => c.commit_id); // The string commit_id
+
+    // Delete their issues
+    await Issue.deleteMany({ commitId: { $in: commitIds } });
+    
+    // Delete their commits
+    await Commit.deleteMany({ developer_email: user.email });
+
+    // Delete the user
+    await User.findByIdAndDelete(req.params.id);
+
+    res.json({ message: 'User and all associated scans deleted successfully' });
+  } catch (err) {
+    console.error('[Admin User Delete Error]', err);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+/**
  * GET /api/admin/scans
  * Lists all scans (commits) along with their issues (recommendations)
  */
@@ -160,6 +209,49 @@ router.get('/scans', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('[Admin Scans Error]', err);
     res.status(500).json({ error: 'Failed to fetch scans' });
+  }
+});
+
+/**
+ * GET /api/admin/settings
+ * Get global settings (maintenance_mode, risk_threshold)
+ */
+router.get('/settings', requireAdmin, async (req, res) => {
+  try {
+    const settings = await Setting.find();
+    // Default fallback if not found
+    const result = {
+      maintenance_mode: false,
+      risk_threshold: 50
+    };
+    settings.forEach(s => {
+      result[s.key] = s.value;
+    });
+    res.json(result);
+  } catch (err) {
+    console.error('[Admin Settings Get Error]', err);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+/**
+ * PATCH /api/admin/settings
+ * Update global settings
+ */
+router.patch('/settings', requireAdmin, async (req, res) => {
+  try {
+    const updates = req.body;
+    for (const [key, value] of Object.entries(updates)) {
+      await Setting.findOneAndUpdate(
+        { key },
+        { value },
+        { upsert: true, new: true }
+      );
+    }
+    res.json({ message: 'Settings updated successfully' });
+  } catch (err) {
+    console.error('[Admin Settings Patch Error]', err);
+    res.status(500).json({ error: 'Failed to update settings' });
   }
 });
 

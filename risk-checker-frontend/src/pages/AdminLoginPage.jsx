@@ -58,7 +58,7 @@ export default function AdminLoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-dark w-full pl-10 pr-4 py-3 rounded-xl text-sm"
+                className="input-dark w-full !pl-10 pr-4 py-3 rounded-xl text-sm"
                 placeholder="admin@riskchecker.dev"
                 autoComplete="email"
               />
@@ -76,7 +76,7 @@ export default function AdminLoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-dark w-full pl-10 pr-11 py-3 rounded-xl text-sm"
+                className="input-dark w-full !pl-10 pr-11 py-3 rounded-xl text-sm"
                 placeholder="••••••••"
                 autoComplete="current-password"
               />

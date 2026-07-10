@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { Shield, KeyRound, User, ChevronRight, Github, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
+import axios from 'axios'
 import { apiUrl } from '../lib/api'
 
 export default function LoginPage() {
@@ -53,7 +54,7 @@ export default function LoginPage() {
   }, [location.search, navigate])
 
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
     
     if (!email || !password) {
@@ -62,16 +63,34 @@ export default function LoginPage() {
     }
     
     setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
+    try {
+      const res = await axios.post(apiUrl('/api/auth/login'), { email, password })
+      
+      const { token, user } = res.data
+      
+      localStorage.setItem('auth_token', token)
+      localStorage.setItem('auth_provider', user.provider || 'password')
+      localStorage.setItem('user_verified', user.isVerified ? 'true' : 'false')
+      localStorage.setItem('user_name', user.name)
+      localStorage.setItem('user_email', user.email)
+      if (user.avatar) {
+        localStorage.setItem('user_avatar', user.avatar)
+      } else {
+        localStorage.removeItem('user_avatar')
+      }
+      
       toast.success('Login successful!')
-      localStorage.setItem('auth_token', 'demo_token_' + Date.now())
-      localStorage.setItem('auth_provider', 'password')
-      localStorage.setItem('user_name', email.split('@')[0])
-      localStorage.setItem('user_email', email)
-      localStorage.removeItem('user_avatar')
-      navigate('/dashboard')
-    }, 1200)
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Login failed. Please try again.'
+      toast.error(errorMsg)
+      
+      if (err.response?.data?.needsVerification) {
+        // Optionally redirect to a resend-verification page or simply inform them
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleGithubLogin = () => {

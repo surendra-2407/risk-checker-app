@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema({
   verificationExpires: { type: Date, default: null },
   resetToken: { type: String, default: null },
   resetTokenExpires: { type: Date, default: null },
+  status: { type: String, enum: ['active', 'suspended'], default: 'active' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);
