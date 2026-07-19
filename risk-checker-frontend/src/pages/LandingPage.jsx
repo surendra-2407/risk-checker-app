@@ -43,12 +43,22 @@ export default function LandingPage() {
 
         <div className="relative max-w-4xl mx-auto">
 
+          {/* Static badge */}
+          <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            AI-Powered Security Scanner
+          </div>
 
-          <h1 className="text-5xl md:text-7xl font-black text-slate-900 leading-tight mb-6">
-            Catch Risks
-            <br />
-            <span className="gradient-text">Before They Ship</span>
+          {/* Fixed single-line hero title — no br, no changing text */}
+          <h1 className="text-5xl md:text-6xl font-black text-slate-900 leading-[1.1] mb-4">
+            Catch Risks Before They Ship
           </h1>
+
+          {/* Static highlighted keyword with shimmer underline — no text changes */}
+          <p className="text-xl md:text-2xl font-semibold mb-6">
+            <span className="hero-highlight">Secure every commit automatically.</span>
+          </p>
+
           <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
             Pre-Commit Risk Checker intercepts your Git commits and scans for secrets,
             vulnerabilities, and unsafe code — with AI-powered fix suggestions in under 3 seconds.
