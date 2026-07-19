@@ -95,7 +95,7 @@ router.post('/github', async (req, res) => {
             developer,
             { repository, branch, commitId },
             { score, level, commit_allowed, counts }
-          ).catch(() => {});
+          ).catch(err => console.warn(`⚠️  [Webhook] sendWebhookScanEmail failed for ${email}: ${err.message}`));
 
           // Also send a Critical alert if risk warrants it
           if (level === 'Critical' || (counts.Critical && counts.Critical > 0)) {
@@ -110,7 +110,7 @@ router.post('/github', async (req, res) => {
                 issues: regexIssues,
                 timestamp: new Date().toISOString()
               }
-            ).catch(() => {});
+            ).catch(err => console.warn(`⚠️  [Webhook] sendCriticalAlertEmail failed for ${email}: ${err.message}`));
           }
         }
       }

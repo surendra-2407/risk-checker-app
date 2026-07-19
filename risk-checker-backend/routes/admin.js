@@ -255,4 +255,83 @@ router.patch('/settings', requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/admin/trigger-digest
+ * Manually fires the weekly digest for all verified users.
+ * Useful for testing email delivery without waiting for Monday's cron.
+ */
+router.post('/trigger-digest', requireAdmin, async (req, res) => {
+  try {
+    // Import and run the digest function directly
+    const { sendWeeklyDigestEmail } = require('../services/emailService');
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const users = await User.find({
+      isVerified: true,
+      status:     { $ne: 'suspended' },
+      email:      { $exists: true, $ne: '' }
+    });
+
+    const results = [];
+    for (const user of users) {
+      const commits = await Commit.find({
+        developer_email: user.email,
+        timestamp: { $gte: weekAgo }
+      });
+
+      const totalScans     = commits.length;
+      const blockedCommits = commits.filter(c => !c.commit_allowed).length;
+      const allowedCommits = commits.filter(c =>  c.commit_allowed).length;
+      const criticalCount  = commits.reduce((s, c) => s + (c.critical_count || 0), 0);
+      const highCount      = commits.reduce((s, c) => s + (c.high_count    || 0), 0);
+      const avgRiskScore   = totalScans > 0
+        ? Math.round(commits.reduce((s, c) => s + c.risk_score, 0) / totalScans)
+        : 0;
+      const repoCounts     = {};
+      commits.forEach(c => { repoCounts[c.repository] = (repoCounts[c.repository] || 0) + 1; });
+      const topRepository  = Object.entries(repoCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+
+      const sent = await sendWeeklyDigestEmail(user.email, user.name, {
+        totalScans, blockedCommits, allowedCommits,
+        criticalCount, highCount, avgRiskScore, topRepository
+      });
+      results.push({ email: user.email, sent });
+    }
+
+    const sentCount = results.filter(r => r.sent).length;
+    console.log(`✅ [Admin] Manual digest trigger: ${sentCount}/${users.length} sent`);
+    res.json({ success: true, total: users.length, sent: sentCount, results });
+  } catch (err) {
+    console.error('[Admin Trigger Digest Error]', err);
+    res.status(500).json({ error: 'Failed to trigger digest', message: err.message });
+  }
+});
+
+/**
+ * POST /api/admin/test-email
+ * Body: { to } — sends a test email to verify Brevo connectivity.
+ */
+router.post('/test-email', requireAdmin, async (req, res) => {
+  try {
+    const { sendWeeklyDigestEmail } = require('../services/emailService');
+    const toEmail = req.body.to || process.env.ADMIN_EMAIL;
+    if (!toEmail) return res.status(400).json({ error: 'No recipient email provided' });
+
+    const sent = await sendWeeklyDigestEmail(toEmail, 'Admin (Test)', {
+      totalScans: 3, blockedCommits: 1, allowedCommits: 2,
+      criticalCount: 0, highCount: 1, avgRiskScore: 42, topRepository: 'test-repo'
+    });
+
+    if (sent) {
+      console.log(`✅ [Admin] Test email sent to ${toEmail}`);
+      res.json({ success: true, message: `Test email sent to ${toEmail}` });
+    } else {
+      res.status(500).json({ success: false, message: 'Email send returned false — check server logs for Brevo error details' });
+    }
+  } catch (err) {
+    console.error('[Admin Test Email Error]', err);
+    res.status(500).json({ error: 'Test email failed', message: err.message });
+  }
+});
+
 module.exports = router;

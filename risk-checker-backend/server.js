@@ -204,61 +204,75 @@ function startKeepAlive() {
   console.log(`✅ Keep-alive started — pinging every 2 min → ${pingUrl}`);
 }
 
-// ── WEEKLY DIGEST CRON ──────────────────────────────────────────────────────
+// ── WEEKLY DIGEST CRON ─────────────────────────────────────────────────────────────────────────
 // Sends every verified user a personalised weekly digest every Monday at 9am IST.
-// IST = UTC+5:30, so 9:00am IST = 3:30am UTC → cron: "30 3 * * 1"
-// Uses node-cron so the schedule survives server restarts reliably.
-function startWeeklyDigest() {
-  const runDigest = async () => {
-    console.log('📧 Weekly digest: starting...');
-    try {
-      const User   = require('./models/User');
-      const Commit = require('./models/Commit');
+// Uses node-cron with Asia/Kolkata timezone directly so no UTC conversion needed.
+async function runWeeklyDigest() {
+  console.log('📧 Weekly digest: starting run...');
+  try {
+    const User   = require('./models/User');
+    const Commit = require('./models/Commit');
 
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const users   = await User.find({ isVerified: true, email: { $exists: true } });
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // Fetch all verified, active users who have an email address
+    const users = await User.find({
+      isVerified: true,
+      status:     { $ne: 'suspended' },
+      email:      { $exists: true, $ne: '' }
+    });
 
-      let sentCount = 0;
-      for (const user of users) {
-        try {
-          const commits = await Commit.find({
-            developer_email: user.email,
-            timestamp: { $gte: weekAgo }
-          });
+    console.log(`📧 Weekly digest: found ${users.length} eligible users`);
+    let sentCount = 0;
+    let skipCount = 0;
 
-          if (commits.length === 0) continue; // skip inactive users
+    for (const user of users) {
+      try {
+        const commits = await Commit.find({
+          developer_email: user.email,
+          timestamp: { $gte: weekAgo }
+        });
 
-          // Aggregate stats
-          const totalScans      = commits.length;
-          const blockedCommits  = commits.filter(c => !c.commit_allowed).length;
-          const allowedCommits  = commits.filter(c =>  c.commit_allowed).length;
-          const criticalCount   = commits.reduce((s, c) => s + (c.critical_count || 0), 0);
-          const highCount       = commits.reduce((s, c) => s + (c.high_count    || 0), 0);
-          const avgRiskScore    = Math.round(commits.reduce((s, c) => s + c.risk_score, 0) / totalScans);
+        // Build stats even if 0 commits — we still send the digest (shows "nothing this week")
+        const totalScans     = commits.length;
+        const blockedCommits = commits.filter(c => !c.commit_allowed).length;
+        const allowedCommits = commits.filter(c =>  c.commit_allowed).length;
+        const criticalCount  = commits.reduce((s, c) => s + (c.critical_count || 0), 0);
+        const highCount      = commits.reduce((s, c) => s + (c.high_count    || 0), 0);
+        const avgRiskScore   = totalScans > 0
+          ? Math.round(commits.reduce((s, c) => s + c.risk_score, 0) / totalScans)
+          : 0;
 
-          // Most active repository
-          const repoCounts = {};
-          commits.forEach(c => { repoCounts[c.repository] = (repoCounts[c.repository] || 0) + 1; });
-          const topRepository = Object.entries(repoCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+        // Most active repository
+        const repoCounts = {};
+        commits.forEach(c => { repoCounts[c.repository] = (repoCounts[c.repository] || 0) + 1; });
+        const topRepository = Object.entries(repoCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
-          await sendWeeklyDigestEmail(user.email, user.name, {
-            totalScans, blockedCommits, allowedCommits,
-            criticalCount, highCount, avgRiskScore, topRepository
-          });
+        const sent = await sendWeeklyDigestEmail(user.email, user.name, {
+          totalScans, blockedCommits, allowedCommits,
+          criticalCount, highCount, avgRiskScore, topRepository
+        });
+        if (sent) {
           sentCount++;
-        } catch (_) {
-          // skip individual user errors silently
+        } else {
+          console.warn(`⚠️  Weekly digest: email send returned false for ${user.email}`);
+          skipCount++;
         }
+      } catch (userErr) {
+        // Per-user errors are non-critical — log and continue
+        console.warn(`⚠️  Weekly digest: failed for ${user.email} — ${userErr.message}`);
+        skipCount++;
       }
-      console.log(`✅ Weekly digest sent to ${sentCount} active users (${users.length} total verified).`);
-    } catch (err) {
-      console.error('❌ Weekly digest error:', err.message);
     }
-  };
+    console.log(`✅ Weekly digest complete: ${sentCount} sent, ${skipCount} failed (${users.length} total eligible).`);
+  } catch (err) {
+    console.error('❌ Weekly digest run failed:', err.message);
+  }
+}
 
-  // Every Monday at 3:30am UTC = 9:00am IST
-  cron.schedule('30 3 * * 1', runDigest, { timezone: 'UTC' });
-  console.log('📅 Weekly digest cron started — fires every Monday 9:00am IST (3:30am UTC)');
+function startWeeklyDigest() {
+  // Every Monday at 9:00am IST — using Asia/Kolkata timezone directly (no UTC math needed)
+  cron.schedule('0 9 * * 1', runWeeklyDigest, { timezone: 'Asia/Kolkata' });
+  console.log('📅 Weekly digest cron started — fires every Monday 9:00am IST');
 }
 
 module.exports = app;

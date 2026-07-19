@@ -142,10 +142,12 @@ router.post('/', async (req, res) => {
         issues: issueList, timestamp
       };
       // Always send the full scan result report
-      sendScanResultEmail(email, developer, scanData).catch(() => {});
+      sendScanResultEmail(email, developer, scanData)
+        .catch(err => console.warn(`⚠️  [Scan] sendScanResultEmail failed for ${email}: ${err.message}`));
       // Extra critical alert if risk is Critical or any Critical-severity issue exists
       if (level === 'Critical' || (counts.Critical && counts.Critical > 0)) {
-        sendCriticalAlertEmail(email, developer, scanData).catch(() => {});
+        sendCriticalAlertEmail(email, developer, scanData)
+          .catch(err => console.warn(`⚠️  [Scan] sendCriticalAlertEmail failed for ${email}: ${err.message}`));
       }
     }
 
@@ -312,9 +314,11 @@ router.post('/github-url', async (req, res) => {
         issues: allIssues,
         timestamp: new Date().toISOString()
       };
-      sendScanResultEmail(email, developer, scanData).catch(() => {});
+      sendScanResultEmail(email, developer, scanData)
+        .catch(err => console.warn(`⚠️  [GitHub Scan] sendScanResultEmail failed for ${email}: ${err.message}`));
       if (riskLevelLabel === 'Critical' || criticalCount > 0) {
-        sendCriticalAlertEmail(email, developer, scanData).catch(() => {});
+        sendCriticalAlertEmail(email, developer, scanData)
+          .catch(err => console.warn(`⚠️  [GitHub Scan] sendCriticalAlertEmail failed for ${email}: ${err.message}`));
       }
     }
 

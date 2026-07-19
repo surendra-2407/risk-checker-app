@@ -1,6 +1,16 @@
-﻿const { BrevoClient } = require('@getbrevo/brevo');
+const { BrevoClient } = require('@getbrevo/brevo');
 
-const client   = new BrevoClient({ apiKey: process.env.BREVO_API_KEY });
+// ─────────────────────────────────────────────────────────────────────────────
+// Startup validation — warn loudly if email env vars are missing
+// ─────────────────────────────────────────────────────────────────────────────
+if (!process.env.BREVO_API_KEY) {
+  console.error('❌ [Email] BREVO_API_KEY is not set — all email sends will fail!');
+}
+if (!process.env.BREVO_FROM_EMAIL) {
+  console.warn('⚠️  [Email] BREVO_FROM_EMAIL is not set — using fallback noreply@riskchecker.dev');
+}
+
+const client   = new BrevoClient({ apiKey: process.env.BREVO_API_KEY || '' });
 const FROM_EMAIL = process.env.BREVO_FROM_EMAIL || 'noreply@riskchecker.dev';
 const FROM_NAME  = process.env.BREVO_FROM_NAME  || 'Risk Checker';
 
@@ -18,21 +28,23 @@ function riskEmoji(level) {
 }
 
 async function send(emailData) {
+  // Guard: never attempt to send if API key is missing
+  if (!process.env.BREVO_API_KEY) {
+    console.error(`❌ [Email] Skipped — BREVO_API_KEY not set. Would have sent to: ${emailData.to?.[0]?.email} [${emailData.subject}]`);
+    return false;
+  }
   try {
     const result = await client.transactionalEmails.sendTransacEmail(emailData);
     console.log(`✅ Email sent → ${emailData.to[0].email} [${emailData.subject}]`);
     return true;
   } catch (err) {
-    console.error('❌ Brevo email error:', err.message || err);
-    // Log full error body for debugging (Brevo often returns a detailed body)
-    if (err.response?.body) {
-      console.error('❌ Brevo error body:', JSON.stringify(err.response.body, null, 2));
-    } else if (err.body) {
-      console.error('❌ Brevo error body:', JSON.stringify(err.body, null, 2));
-    } else {
-      console.error('❌ Brevo full error:', JSON.stringify(err, null, 2));
+    // @getbrevo/brevo v5 SDK stores the API error response in err.body (not err.response.body)
+    const errBody = err.body || err.response?.body || null;
+    console.error(`❌ [Email] Brevo send failed → to: ${emailData.to?.[0]?.email} | subject: ${emailData.subject}`);
+    console.error(`❌ [Email] Error: ${err.message || String(err)}`);
+    if (errBody) {
+      console.error(`❌ [Email] Brevo response body: ${JSON.stringify(errBody)}`);
     }
-    console.error(`❌ Email FAILED → to: ${emailData.to?.[0]?.email}, from: ${emailData.sender?.email}, subject: ${emailData.subject}`);
     return false;
   }
 }
