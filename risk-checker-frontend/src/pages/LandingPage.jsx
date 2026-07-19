@@ -15,7 +15,7 @@ const FEATURES = [
 const FLOW_STEPS = [
   { step: '01', label: 'Write Code', desc: 'Developer stages files with git add' },
   { step: '02', label: 'Hook Fires', desc: 'Pre-commit shell script activates' },
-  { step: '03', label: 'Scan Runs',  desc: 'Backend applies 23 detection rules' },
+  { step: '03', label: 'Scan Runs',  desc: 'Backend applies 30 detection rules' },
   { step: '04', label: 'AI Explains', desc: 'GPT analyzes top issues and suggests fixes' },
   { step: '05', label: 'Decision',   desc: 'Commit allowed or blocked based on score' },
 ]
@@ -79,7 +79,7 @@ export default function LandingPage() {
           {/* Live stats */}
           <div className="flex items-center justify-center gap-8 mt-14 flex-wrap">
             {[
-              { val: '23+', label: 'Detection Rules' },
+              { val: '30+', label: 'Detection Rules' },
               { val: '<3s', label: 'Scan Time' },
               { val: 'GPT', label: 'AI Suggestions' },
               { val: '5✕', label: 'Risk Categories' },

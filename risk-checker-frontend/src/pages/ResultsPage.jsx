@@ -240,7 +240,7 @@ export default function ResultsPage() {
           <div className="glass rounded-xl p-12 text-center">
             <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
             <p className="text-xl font-bold text-slate-900 mb-2">No issues detected</p>
-            <p className="text-slate-600">Your code passed all 23 security checks. Great work!</p>
+            <p className="text-slate-600">Your code passed all 30 security checks. Great work!</p>
           </div>
         ) : (
           <div className="space-y-3">

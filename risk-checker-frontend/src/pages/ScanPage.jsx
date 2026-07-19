@@ -96,7 +96,7 @@ export default function ScanPage() {
   const runPhases = async () => {
     const phases = [
       'Fetching file from GitHub...',
-      'Running 23 detection rules...',
+      'Running 30 detection rules...',
       'Scoring risk level...',
       'Generating AI suggestions...'
     ]
@@ -143,7 +143,7 @@ export default function ScanPage() {
       return
     }
     setLoading(true)
-    const phases = ['Parsing code structure...', 'Running 23 detection rules...', 'Scoring risk level...', 'Generating AI suggestions...']
+    const phases = ['Parsing code structure...', 'Running 30 detection rules...', 'Scoring risk level...', 'Generating AI suggestions...']
     setScanning(true)
     for (const phase of phases) {
       setScanPhase(phase)
@@ -374,7 +374,7 @@ export default function ScanPage() {
                 {[
                   ['1', 'Paste any public GitHub file URL'],
                   ['2', 'Backend fetches the real file content'],
-                  ['3', '23 security rules scan the code'],
+                  ['3', '30 security rules scan the code'],
                   ['4', 'AI generates fix suggestions'],
                   ['5', 'Results saved to your history'],
                 ].map(([n, t]) => (
@@ -388,7 +388,7 @@ export default function ScanPage() {
               <ol className="space-y-3">
                 {[
                   ['1', 'Paste or upload your code'],
-                  ['2', '23 detection rules scan instantly'],
+                  ['2', '30 detection rules scan instantly'],
                   ['3', 'Risk score 0–100 is calculated'],
                   ['4', 'AI suggests fixes per issue'],
                 ].map(([n, t]) => (

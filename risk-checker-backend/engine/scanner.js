@@ -1,6 +1,6 @@
 /**
  * Core Risk Analysis Engine
- * Applies 20+ regex-based detection rules against code text.
+ * Applies 30 regex-based detection rules against code text.
  * Returns an array of issue objects sorted by severity.
  */
 
@@ -182,6 +182,67 @@ const RULES = [
     description: 'Math.random() used — not cryptographically secure',
     suggested_fix: 'Use crypto.randomBytes() or crypto.randomUUID() for security-sensitive values',
     owasp_ref: 'CWE-338'
+  },
+
+  // ── JWT MISUSE ────────────────────────────────────────────────────────────
+  {
+    id: 'R024', category: 'JWT Misuse', severity: 'Critical',
+    pattern: /jwt\.sign\s*\([^)]*,\s*['"`]{2}['"`]/g,
+    description: 'JWT signed with an empty secret — tokens are completely insecure',
+    suggested_fix: 'Use a strong, randomly generated secret stored in process.env.JWT_SECRET',
+    owasp_ref: 'CWE-347'
+  },
+  {
+    id: 'R025', category: 'JWT Misuse', severity: 'High',
+    pattern: /jwt\.verify\s*\([^)]*algorithm[s]?\s*:\s*['"`]none['"`]/gi,
+    description: 'JWT verification allows "none" algorithm — signature bypass risk',
+    suggested_fix: 'Always specify allowed algorithms: jwt.verify(token, secret, { algorithms: ["HS256"] })',
+    owasp_ref: 'CWE-347'
+  },
+
+  // ── CORS MISCONFIGURATION ─────────────────────────────────────────────────
+  {
+    id: 'R026', category: 'CORS', severity: 'High',
+    pattern: /origin\s*:\s*['"`]\*['"`]|Access-Control-Allow-Origin['"`]?\s*[=:]\s*['"`]\*/g,
+    description: 'CORS wildcard (*) origin detected — allows any site to access your API',
+    suggested_fix: 'Restrict CORS to specific trusted origins: origin: ["https://yourdomain.com"]',
+    owasp_ref: 'CWE-942'
+  },
+
+  // ── PROTOTYPE POLLUTION ───────────────────────────────────────────────────
+  {
+    id: 'R027', category: 'Prototype Pollution', severity: 'High',
+    pattern: /\[\s*['"`]__proto__['"`]\s*\]|Object\.assign\s*\(\s*\{\s*\}\s*,\s*(req\.|request\.|params\.|body\.)/g,
+    description: 'Potential prototype pollution — user input merged into object unsafely',
+    suggested_fix: 'Use Object.create(null) for merge targets or validate keys against an allowlist',
+    owasp_ref: 'CWE-1321'
+  },
+
+  // ── OPEN REDIRECT ─────────────────────────────────────────────────────────
+  {
+    id: 'R028', category: 'Open Redirect', severity: 'Medium',
+    pattern: /res\.redirect\s*\([^)]*\+\s*(req\.|request\.|params\.|body\.|query\.)/g,
+    description: 'Open redirect — redirecting to a user-controlled URL',
+    suggested_fix: 'Validate redirect URLs against an allowlist before redirecting',
+    owasp_ref: 'CWE-601'
+  },
+
+  // ── INSECURE COOKIES ──────────────────────────────────────────────────────
+  {
+    id: 'R029', category: 'Insecure Cookies', severity: 'Medium',
+    pattern: /res\.cookie\s*\([^)]*\)/g,
+    description: 'Cookie set — verify httpOnly, secure, and sameSite flags are present',
+    suggested_fix: 'Always set: res.cookie(name, val, { httpOnly: true, secure: true, sameSite: "Strict" })',
+    owasp_ref: 'CWE-614'
+  },
+
+  // ── THIRD-PARTY API KEY LEAKS ─────────────────────────────────────────────
+  {
+    id: 'R030', category: 'Secrets', severity: 'Critical',
+    pattern: /(sk_live_[a-zA-Z0-9]{24,}|TWILIO_AUTH_TOKEN\s*[=:]\s*\S+|AIza[0-9A-Za-z-_]{35}|SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43})/g,
+    description: 'Third-party service key detected (Stripe live key / Twilio token / Google API key / SendGrid key)',
+    suggested_fix: 'Immediately revoke this key and store it in environment variables only',
+    owasp_ref: 'CWE-798'
   }
 ];
 
